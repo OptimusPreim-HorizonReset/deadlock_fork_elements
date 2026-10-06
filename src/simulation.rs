@@ -991,6 +991,15 @@ impl Simulation {
         });
     }
 
+    /// Profiled step: execute a simulation step and return per-component timings
+    /// as (name, duration_micros). Currently returns a single `step_total` component.
+    pub fn step_profiled(&mut self) -> Vec<(String, u128)> {
+        let t0 = std::time::Instant::now();
+        self.step();
+        let dur = t0.elapsed().as_micros() as u128;
+        vec![("step_total".to_string(), dur)]
+    }
+
     pub fn collide(&mut self) {
         if self.bodies.len() < 2 {
             return;
@@ -1178,15 +1187,50 @@ impl Simulation {
 
         let (mass_min, mass_max) = self.accretion_template.particle_mass_range;
 
-        // Spawn in absolute disk coordinates, not relative to detected centers.
-        // This ensures spawns occur in the outer third of the galactic disk.
+        // Determine spawn center body and its rotation axis + direction, prefer element-specific core in atom mode.
+        let spawn_center_idx_opt = if self.config.enable_galactic_atom_simulation {
+            atomic_number.and_then(|selected| {
+                self.bodies.iter().position(|body| {
+                    body.element_atomic_number == Some(selected) && body.segment == BodySegment::Core
+                })
+            })
+        } else {
+            Some(self.center1_idx)
+        };
+
+        let spawn_center_idx = spawn_center_idx_opt.unwrap_or(self.center1_idx);
+        let spawn_center_body = self.bodies.get(spawn_center_idx);
+        let spawn_center = spawn_center_body.map(|b| b.pos).unwrap_or_else(Vec3::zero);
+        let rotation_axis = spawn_center_body
+            .map(|b| b.rotation_axis)
+            .unwrap_or_else(|| Vec3::new(0.0, 0.0, 1.0));
+        let clockwise = spawn_center_body
+            .map(|b| b.angular_speed > 0.0)
+            .unwrap_or(true);
+
+        // Spawn in the galaxy's local disk plane using the template plane basis.
         let a = fastrand::f32() * std::f32::consts::TAU;
         let (sin, cos) = a.sin_cos();
         let r = spawn_start_r + fastrand::f32() * (outer_r - spawn_start_r);
-        let spawn_pos =
-            spawn_center + Vec3::new(cos * r, sin * r, (fastrand::f32() - 0.5) * outer_r * 0.03);
-        // Tangent direction for a clockwise orbit in the disk plane.
-        let tangent = Vec3::new(sin, -cos, 0.0);
+
+        // thickness: use template disk height factor if enabled, else small default
+        let thickness = self.accretion_template.outer_radius
+            * if self.accretion_template.disk_equilibrium_enabled {
+                self.accretion_template.disk_equilibrium_scale_height_factor
+            } else {
+                0.01
+            };
+        let depth = (fastrand::f32() - 0.5) * thickness;
+        let (u, v) = self.accretion_template.plane_basis(rotation_axis);
+        let offset = (u * cos + v * sin) * r + rotation_axis * depth;
+        let spawn_pos = spawn_center + offset;
+
+        // Tangent direction for circular orbit in the local plane.
+        let tangent = if clockwise {
+            -rotation_axis.cross(offset).normalized()
+        } else {
+            rotation_axis.cross(offset).normalized()
+        };
 
         let base_mass = mass_min + fastrand::f32() * (mass_max - mass_min);
         let element_mass_scale = atomic_number
@@ -1201,7 +1245,11 @@ impl Simulation {
         let softening = self.config.epsilon * self.config.softening_scale_factor;
         let softening_sq = softening * softening;
         let acc = self.octree.acc(spawn_pos, softening_sq);
-        let orbital_speed = (acc.mag() * r).sqrt();
+
+        let projected_offset = offset - rotation_axis * offset.dot(rotation_axis);
+        let orbital_radius = projected_offset.mag().max(f32::EPSILON);
+
+        let orbital_speed = (acc.mag() * orbital_radius).sqrt();
         let vel = tangent * orbital_speed;
 
         let angular_speed = (self.config.spawn_angular_speed_base
@@ -1214,7 +1262,7 @@ impl Simulation {
             mass,
             radius,
             angular_speed,
-            Vec3::new(0.0, 0.0, 1.0),
+            rotation_axis,
         );
         if let Some(atomic_number) = atomic_number {
             body = body.with_element(atomic_number, BodySegment::Accretion);

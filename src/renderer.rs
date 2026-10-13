@@ -424,70 +424,51 @@ impl quarkstrom::Renderer for Renderer {
         if !self.bodies.is_empty() {
             if self.show_bodies {
                 let debug_project = std::env::var("RENDER_DEBUG_LOG_PROJECT").is_ok();
+                let debug_disable_cull = std::env::var("RENDER_DEBUG_DISABLE_CULL").is_ok();
+                let debug_draw_test = std::env::var("RENDER_DEBUG_DRAW_TEST").is_ok();
                 let mut debug_logged = 0usize;
-                let debug_limit = 32usize;
+                let debug_limit = 64usize;
                 for (i, body) in self.bodies.iter().enumerate() {
                     if let Some((pos, z)) = self.project_point_basis(
                         body.pos, cam_pos, forward, right, up, tan_half, aspect,
                     ) {
-                        // Optional per-body projected coordinate logging for debugging
+                        // compute projected radius and cull decision first
+                        let radius = body.projected_radius() / (z * tan_half).max(0.01);
+                        let culled = radius < 0.4 && !debug_disable_cull;
+
+                        // Optional per-body projected coordinate + radius logging for debugging
                         if debug_project && debug_logged < debug_limit {
                             let view_pos = Vec2::new(width * 0.5, height * 0.5);
                             let view_scale = width.min(height) * 0.5;
-                            let pixel_a = Vec2::new(view_pos.x + pos.x * view_scale, view_pos.y + pos.y * view_scale);
-                            let pixel_b = Vec2::new(view_pos.x + pos.x * view_scale, view_pos.y - pos.y * view_scale);
+                            let pixel_center = Vec2::new(view_pos.x + pos.x * view_scale, view_pos.y + pos.y * view_scale);
                             eprintln!(
-                                "PROJECTED[{}] world={:?} ndc={:?} pixel_center_nat=({:.1},{:.1}) pixel_center_inverted=({:.1},{:.1}) z={:.3}",
-                                i, body.pos, pos, pixel_a.x, pixel_a.y, pixel_b.x, pixel_b.y, z
+                                "PROJECTED[{}] world={:?} ndc={:?} pixel=({:.1},{:.1}) z={:.3} radius={:.3} culled={}",
+                                i, body.pos, pos, pixel_center.x, pixel_center.y, z, radius, culled
                             );
                             debug_logged += 1;
                         }
 
-                        let radius = body.projected_radius() / (z * tan_half).max(0.01);
-
                         // Screen-space culling: skip bodies that project smaller than a pixel threshold
-                        if radius < 0.4 {
+                        if culled {
                             continue;
                         }
 
                         if body.segment == BodySegment::Gas {
-                            let billboard =
-                                GasBillboard::new(body.gas_density, body.gas_temperature);
+                            let billboard = GasBillboard::new(body.gas_density, body.gas_temperature);
                             let [red, green, blue] = billboard.color();
                             // Reduce layers for small projected sizes to save draw calls
-                            let scales = if radius < 1.2 {
-                                [1.0, 0.0, 0.0]
-                            } else {
-                                [1.8, 1.35, 1.0]
-                            };
-                            for (layer_index, alpha) in billboard.alpha_layers().iter().enumerate()
-                            {
-                                if scales[layer_index] <= 0.0 {
-                                    continue;
-                                }
-                                ctx.draw_circle(
-                                    pos,
-                                    radius * scales[layer_index],
-                                    [red, green, blue, (alpha * 255.0).round() as u8],
-                                );
+                            let scales = if radius < 1.2 { [1.0, 0.0, 0.0] } else { [1.8, 1.35, 1.0] };
+                            for (layer_index, alpha) in billboard.alpha_layers().iter().enumerate() {
+                                if scales[layer_index] <= 0.0 { continue; }
+                                ctx.draw_circle(pos, radius * scales[layer_index], [red, green, blue, (alpha * 255.0).round() as u8]);
                             }
                         } else {
                             let color = if CHEMISTRY_COMPASS_COLORING.load(Ordering::Relaxed) {
-                                body.element_atomic_number
-                                    .and_then(element_by_atomic_number)
-                                    .map(|element| {
-                                        let [red, green, blue] = element.color();
-                                        [
-                                            (red * 255.0).round() as u8,
-                                            (green * 255.0).round() as u8,
-                                            (blue * 255.0).round() as u8,
-                                            0xff,
-                                        ]
-                                    })
-                                    .unwrap_or([0xff; 4])
-                            } else {
-                                [0xff; 4]
-                            };
+                                body.element_atomic_number.and_then(element_by_atomic_number).map(|element| {
+                                    let [red, green, blue] = element.color();
+                                    [(red * 255.0).round() as u8, (green * 255.0).round() as u8, (blue * 255.0).round() as u8, 0xff]
+                                }).unwrap_or([0xff;4])
+                            } else { [0xff;4] };
                             ctx.draw_circle(pos, radius, color);
                         }
                         if self.show_spin_axes {
@@ -496,6 +477,11 @@ impl quarkstrom::Renderer for Renderer {
                             ctx.draw_line(pos, axis_tip, [0x80, 0xff, 0xff, 0xff]);
                         }
                     }
+                }
+
+                if debug_draw_test {
+                    // draw a large red test dot at viewport center to ensure draw visibility
+                    ctx.draw_circle(Vec2::new(width * 0.5, height * 0.5), 16.0, [0xff, 0x00, 0x00, 0xff]);
                 }
             }
         }

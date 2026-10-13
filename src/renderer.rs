@@ -53,6 +53,9 @@ pub struct Renderer {
     camera_rotate_speed: f32,
     viewport_size: Vec2,
 
+    // whether an automatic camera fit to scene extents has been applied
+    camera_autofit_done: bool,
+
     settings_window_open: bool,
     element_sample_open: bool,
     selected_atomic_number: u8,
@@ -86,6 +89,9 @@ impl quarkstrom::Renderer for Renderer {
             camera_speed: 24.0,
             camera_rotate_speed: 0.0035,
             viewport_size: Vec2::zero(),
+
+            // Autofit not yet applied on startup; applies once when first bodies swap occurs
+            camera_autofit_done: false,
 
             settings_window_open: false,
             element_sample_open: false,
@@ -232,6 +238,27 @@ impl quarkstrom::Renderer for Renderer {
                 std::mem::swap(&mut self.bodies, &mut BODIES.lock());
                 if self.show_quadtree {
                     std::mem::swap(&mut self.quadtree, &mut QUADTREE.lock());
+                }
+
+                // Auto-fit camera to scene extents on first body swap if not already done
+                if !self.camera_autofit_done && !self.bodies.is_empty() {
+                    let mut min = Vec3::new(f32::MAX, f32::MAX, f32::MAX);
+                    let mut max = Vec3::new(f32::MIN, f32::MIN, f32::MIN);
+                    for b in &self.bodies {
+                        min.x = min.x.min(b.pos.x);
+                        min.y = min.y.min(b.pos.y);
+                        min.z = min.z.min(b.pos.z);
+                        max.x = max.x.max(b.pos.x);
+                        max.y = max.y.max(b.pos.y);
+                        max.z = max.z.max(b.pos.z);
+                    }
+                    let center = (min + max) * 0.5;
+                    let extent = (max - min).mag();
+                    // Choose a distance that fits the extent with some margin; clamp to sensible range
+                    let desired_distance = (extent * 1.25).max(80.0).min(10_000_000.0);
+                    self.camera_target = center;
+                    self.camera_distance = desired_distance;
+                    self.camera_autofit_done = true;
                 }
             }
             *lock = false;

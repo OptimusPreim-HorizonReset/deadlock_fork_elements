@@ -1269,19 +1269,37 @@ impl Simulation {
 
         self.process_manual_spawns();
         self.iterate();
-        if self.frame % self.config.collision_interval == 0 {
+
+        // Adaptive interval scaling under heavy body counts to reduce expensive work
+        let mut interval_scale = 1.0_f32;
+        if self.config.performance_dynamic_interval_scaling {
+            let threshold = self.config.performance_body_count_threshold.max(1);
+            let factor = (self.bodies.len() as f32) / (threshold as f32);
+            if factor > 1.0 {
+                interval_scale = factor.min(self.config.performance_max_interval_scale as f32);
+            }
+        }
+
+        let collision_interval = ((self.config.collision_interval as f32) * interval_scale).round() as usize;
+        let collision_interval = collision_interval.max(1);
+        if self.frame % collision_interval == 0 {
             if renderer::COLLISIONS_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
                 self.collide();
             }
         }
-        if self.frame % self.config.attract_interval == 0 {
+
+        let attract_interval = ((self.config.attract_interval as f32) * interval_scale).round() as usize;
+        let attract_interval = attract_interval.max(1);
+        if self.frame % attract_interval == 0 {
             self.attract();
             // Raumzeitkrümmungs-Dilatation für Center-Partikel überschreibt Teil der Gravitation
             self.apply_center_spacetime_dilation();
         }
+
         if renderer::SPAWN_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
             self.spawn_accretion();
         }
+
         if self.config.enable_flow_dynamics_model {
             // deterministically detect dense gas cells and spawn proto-stars conservatively
             self.process_gas_collapse_and_spawn();
@@ -1300,19 +1318,49 @@ impl Simulation {
 
         self.apply_cluster_motion();
         if self.config.enable_flow_dynamics_model {
-            self.update_star_evolution();
+            // Throttle star evolution updates using the timescale scheduler and
+            // the configurable star_evolution_interval to control cost.
+            if self.timescale_scheduler.should_update(self.config.star_evolution_interval) {
+                self.update_star_evolution();
+            }
         }
         self.frame += 1;
     }
 
     pub fn render_update_interval(&self) -> usize {
-        self.config.render_update_interval.max(1)
+        // Dynamically scale the render publish interval under heavy body counts to
+        // reduce expensive Body->RenderBody conversions. Uses the same adaptive
+        // interval scaling parameters as other expensive passes.
+        let mut interval_scale = 1.0_f32;
+        if self.config.performance_dynamic_interval_scaling {
+            let threshold = self.config.performance_body_count_threshold.max(1);
+            let factor = (self.bodies.len() as f32) / (threshold as f32);
+            if factor > 1.0 {
+                interval_scale = factor.min(self.config.performance_max_interval_scale as f32);
+            }
+        }
+        let interval = ((self.config.render_update_interval as f32) * interval_scale).ceil() as usize;
+        interval.max(1)
+    }
+
+    // Public accessors for render sampling parameters so external modules (eg. main)
+    // can request sampling limits without accessing private Simulation fields.
+    pub fn performance_render_body_limit(&self) -> usize {
+        self.config.performance_render_body_limit
+    }
+
+    pub fn performance_render_sample_ratio(&self) -> f32 {
+        self.config.performance_render_sample_ratio
     }
 
     pub fn attract(&mut self) {
         let oct = Oct::new_containing(&self.bodies);
         // Allow tuning the octree reserve size via configuration to balance memory vs realloc
-        let reserve_factor = self.config.performance_octree_reserve_factor.max(1.0);
+        let mut reserve_factor = self.config.performance_octree_reserve_factor.max(1.0);
+        // In high-count performance mode, reduce octree reserve to speed up allocation and insertion.
+        if self.bodies.len() > self.config.performance_body_count_threshold && self.config.performance_high_count_mode {
+            reserve_factor = 1.0; // conservative reserve to avoid excessive allocation
+        }
         let reserve_nodes = ((self.bodies.len() as f32) * reserve_factor).ceil() as usize;
         // parents typically fewer than leaf nodes; reserve a fraction of the factor
         let reserve_parents = ((self.bodies.len() as f32) * (reserve_factor * 0.25)).ceil() as usize;
@@ -1429,14 +1477,131 @@ impl Simulation {
     /// Profiled step: execute a simulation step and return per-component timings
     /// as (name, duration_micros). Currently returns a single `step_total` component.
     pub fn step_profiled(&mut self) -> Vec<(String, u128)> {
-        let t0 = std::time::Instant::now();
-        self.step();
-        let dur = t0.elapsed().as_micros() as u128;
-        vec![("step_total".to_string(), dur)]
+        use std::time::Instant;
+        let global_start = Instant::now();
+        let mut comps: Vec<(String, u128)> = Vec::new();
+
+        // timescale tick
+        let t = Instant::now();
+        self.timescale_scheduler.tick();
+        comps.push(("timescale_tick".to_string(), t.elapsed().as_micros() as u128));
+
+        // Role updates (M1)
+        if self
+            .timescale_scheduler
+            .should_update(self.config.role_update_interval)
+        {
+            if self.config.enable_flow_dynamics_model {
+                let t = Instant::now();
+                self.update_roles();
+                comps.push(("update_roles".to_string(), t.elapsed().as_micros() as u128));
+                eprintln!("🧭 Role update executed at frame {}", self.frame);
+            }
+        }
+
+        // manual spawns
+        let t = Instant::now();
+        self.process_manual_spawns();
+        comps.push(("process_manual_spawns".to_string(), t.elapsed().as_micros() as u128));
+
+        // iterate (body updates)
+        let t = Instant::now();
+        self.iterate();
+        comps.push(("iterate".to_string(), t.elapsed().as_micros() as u128));
+
+        // Adaptive interval scaling (copy from step)
+        let mut interval_scale = 1.0_f32;
+        if self.config.performance_dynamic_interval_scaling {
+            let threshold = self.config.performance_body_count_threshold.max(1);
+            let factor = (self.bodies.len() as f32) / (threshold as f32);
+            if factor > 1.0 {
+                interval_scale = factor.min(self.config.performance_max_interval_scale as f32);
+            }
+        }
+
+        let collision_interval = ((self.config.collision_interval as f32) * interval_scale).round() as usize;
+        let collision_interval = collision_interval.max(1);
+        if self.frame % collision_interval == 0 {
+            if renderer::COLLISIONS_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
+                let t = Instant::now();
+                self.collide();
+                comps.push(("collide".to_string(), t.elapsed().as_micros() as u128));
+            }
+        }
+
+        let attract_interval = ((self.config.attract_interval as f32) * interval_scale).round() as usize;
+        let attract_interval = attract_interval.max(1);
+        if self.frame % attract_interval == 0 {
+            let t = Instant::now();
+            self.attract();
+            comps.push(("attract_octree_build".to_string(), t.elapsed().as_micros() as u128));
+
+            let t = Instant::now();
+            self.apply_center_spacetime_dilation();
+            comps.push(("apply_center_spacetime_dilation".to_string(), t.elapsed().as_micros() as u128));
+        }
+
+        // spawn/accretion
+        if renderer::SPAWN_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
+            let t = Instant::now();
+            self.spawn_accretion();
+            comps.push(("spawn_accretion".to_string(), t.elapsed().as_micros() as u128));
+        }
+
+        if self.config.enable_flow_dynamics_model {
+            let t = Instant::now();
+            self.process_gas_collapse_and_spawn();
+            comps.push(("process_gas_collapse_and_spawn".to_string(), t.elapsed().as_micros() as u128));
+        }
+
+        // Periodically compute emergence heuristics
+        if self
+            .timescale_scheduler
+            .should_update(self.config.institution_recompute_interval)
+        {
+            if self.config.enable_flow_dynamics_model {
+                let t = Instant::now();
+                self.cache_galaxies();
+                self.recompute_institutions();
+                comps.push(("recompute_institutions".to_string(), t.elapsed().as_micros() as u128));
+            }
+        }
+
+        let t = Instant::now();
+        self.apply_cluster_motion();
+        comps.push(("apply_cluster_motion".to_string(), t.elapsed().as_micros() as u128));
+
+        if self.config.enable_flow_dynamics_model {
+            let t = Instant::now();
+            self.update_star_evolution();
+            comps.push(("update_star_evolution".to_string(), t.elapsed().as_micros() as u128));
+        }
+
+        self.frame += 1;
+
+        let total = global_start.elapsed().as_micros() as u128;
+        comps.push(("step_total".to_string(), total));
+        comps
     }
 
     pub fn collide(&mut self) {
         if self.bodies.len() < 2 {
+            return;
+        }
+
+        // Performance guard: skip expensive collision resolution entirely when body count
+        // is above the configured threshold and high-count performance mode is enabled.
+        // This avoids O(N) or worse neighbor scans that kill frame time at very high N.
+        if self.bodies.len() > self.config.performance_body_count_threshold
+            && self.config.performance_high_count_mode
+        {
+            if std::env::var("PROFILE_RUNTIME").is_err() {
+                eprintln!(
+                    "⚠ Skipping collide() due to high body count: {} > {} (performance_high_count_mode)",
+                    self.bodies.len(),
+                    self.config.performance_body_count_threshold
+                );
+            }
             return;
         }
 
@@ -1502,6 +1667,9 @@ impl Simulation {
         };
 
         let mut cell_map: HashMap<usize, Vec<usize>> = HashMap::new();
+        // Reserve approximate capacity for sparse occupied cells to reduce rehashing
+        let expected_cells = (self.bodies.len()).min(total_cells);
+        cell_map.reserve(expected_cells);
         for (index, body) in self.bodies.iter().enumerate() {
             let idx = cell_index(body.pos);
             if idx < total_cells {
@@ -1513,45 +1681,45 @@ impl Simulation {
             return;
         }
 
-        let cell_map = Arc::new(cell_map);
-        let occupied_cells: Vec<usize> = cell_map.as_ref().keys().copied().collect();
+        let occupied_cells: Vec<usize> = cell_map.keys().copied().collect();
 
-        // Collect candidate pairs in parallel (no locking), then resolve sequentially to avoid data races
-        let pairs_by_cell: Vec<Vec<(usize, usize)>> = occupied_cells
-            .par_iter()
-            .map(|&cell_idx| {
-                let map_ref = &*cell_map;
-                let size_y_sz = size_y;
-                let size_z_sz = size_z;
-                let size_x_sz = size_x;
+        // Iterate candidate neighbor cell pairs and resolve collisions directly without
+        // allocating a large intermediate list of index pairs. This reduces allocations
+        // and the pressure on the allocator for large body counts.
+        for &cell_idx in &occupied_cells {
+            let size_y_sz = size_y;
+            let size_z_sz = size_z;
+            let size_x_sz = size_x;
 
-                let ix = cell_idx / (size_y_sz * size_z_sz);
-                let rem = cell_idx % (size_y_sz * size_z_sz);
-                let iy = rem / size_z_sz;
-                let iz = rem % size_z_sz;
+            let ix = cell_idx / (size_y_sz * size_z_sz);
+            let rem = cell_idx % (size_y_sz * size_z_sz);
+            let iy = rem / size_z_sz;
+            let iz = rem % size_z_sz;
 
-                let mut local_pairs: Vec<(usize, usize)> = Vec::new();
-                if let Some(indices) = map_ref.get(&cell_idx) {
-                    for dx in 0..=1 {
-                        for dy in 0..=1 {
-                            for dz in 0..=1 {
-                                let nx = ix + dx;
-                                let ny = iy + dy;
-                                let nz = iz + dz;
-                                if nx >= size_x_sz || ny >= size_y_sz || nz >= size_z_sz {
-                                    continue;
-                                }
-                                let neighbor_idx = (nx * size_y_sz + ny) * size_z_sz + nz;
-                                if let Some(neighbor_indices) = map_ref.get(&neighbor_idx) {
-                                    for &i in indices {
-                                        for &j in neighbor_indices {
-                                            if neighbor_idx == cell_idx && i >= j {
-                                                continue;
-                                            }
-                                            if i == j {
-                                                continue;
-                                            }
-                                            local_pairs.push((i, j));
+            if let Some(indices) = cell_map.get(&cell_idx) {
+                for dx in 0..=1 {
+                    for dy in 0..=1 {
+                        for dz in 0..=1 {
+                            let nx = ix + dx;
+                            let ny = iy + dy;
+                            let nz = iz + dz;
+                            if nx >= size_x_sz || ny >= size_y_sz || nz >= size_z_sz {
+                                continue;
+                            }
+                            let neighbor_idx = (nx * size_y_sz + ny) * size_z_sz + nz;
+                            if let Some(neighbor_indices) = cell_map.get(&neighbor_idx) {
+                                for &i in indices {
+                                    for &j in neighbor_indices {
+                                        if neighbor_idx == cell_idx && i >= j {
+                                            continue;
+                                        }
+                                        if i == j {
+                                            continue;
+                                        }
+                                        // Bounds-check indices then resolve directly to avoid building
+                                        // intermediate vectors of pairs.
+                                        if i < self.bodies.len() && j < self.bodies.len() {
+                                            self.resolve(i, j, &mut center_merge_pair);
                                         }
                                     }
                                 }
@@ -1559,31 +1727,6 @@ impl Simulation {
                         }
                     }
                 }
-                local_pairs
-            })
-            .collect();
-
-        let index_pairs: Vec<(usize, usize)> = pairs_by_cell.into_iter().flatten().collect();
-
-        // Convert index pairs to stable id pairs to avoid index invalidation if bodies are reordered later
-        let mut id_pairs: Vec<(u64, u64)> = Vec::with_capacity(index_pairs.len());
-        for (i, j) in index_pairs {
-            if i < self.bodies.len() && j < self.bodies.len() {
-                id_pairs.push((self.bodies[i].body_id, self.bodies[j].body_id));
-            }
-        }
-
-        // Map current body_id -> index for stable lookups during sequential resolution
-        let id_index_map: HashMap<u64, usize> = self
-            .bodies
-            .iter()
-            .enumerate()
-            .map(|(idx, body)| (body.body_id, idx))
-            .collect();
-
-        for (id1, id2) in id_pairs {
-            if let (Some(&i), Some(&j)) = (id_index_map.get(&id1), id_index_map.get(&id2)) {
-                self.resolve(i, j, &mut center_merge_pair);
             }
         }
 
@@ -1623,6 +1766,14 @@ impl Simulation {
         let spawn_start_r = self.accretion_template.outer_ring_spawn_zone_inner_radius;
         let outer_r = self.accretion_template.outer_ring_spawn_zone_outer_radius;
         if spawn_start_r >= outer_r {
+            return;
+        }
+
+        // Enforce global body budget at runtime to prevent runaway spawning
+        if self.config.total_body_budget > 0 && self.bodies.len() >= self.config.total_body_budget {
+            if std::env::var("PROFILE_RUNTIME").is_err() {
+                eprintln!("⚠ Skipping spawn_accretion: reached total_body_budget {} bodies", self.bodies.len());
+            }
             return;
         }
 
@@ -1782,6 +1933,13 @@ impl Simulation {
         } else {
             0usize
         };
+        // Enforce total body budget for manual spawns
+        if self.config.total_body_budget > 0 && self.bodies.len() >= self.config.total_body_budget {
+            if std::env::var("PROFILE_RUNTIME").is_err() {
+                eprintln!("⚠ Skipping manual spawn: reached total_body_budget {} bodies", self.bodies.len());
+            }
+            return;
+        }
         self.add_body_with_cluster(body, Some(cid));
     }
 
@@ -1853,13 +2011,38 @@ impl Simulation {
             star_body.star_state = Some(StarState::new(convert_mass, self.bodies[gas_idx].gas_temperature.max(0.001)));
             // inherit cluster membership of the gas cell if available and insert via helper
             let cid = *self.body_cluster_ids.get(gas_idx).unwrap_or(&0);
+            // Enforce global budget before spawning proto-star
+            if self.config.total_body_budget > 0 && self.bodies.len() >= self.config.total_body_budget {
+                if std::env::var("PROFILE_RUNTIME").is_err() {
+                    eprintln!("⚠ Skipping proto-star spawn: reached total_body_budget {} bodies", self.bodies.len());
+                }
+                break;
+            }
             self.add_body_with_cluster(star_body, Some(cid));
 
-            eprintln!("✨ Proto-star spawned from gas body {} mass={:.3}", self.bodies[gas_idx].body_id, convert_mass);
+            if std::env::var("PROFILE_RUNTIME").is_err() {
+                eprintln!("✨ Proto-star spawned from gas body {} mass={:.3}", self.bodies[gas_idx].body_id, convert_mass);
+            }
         }
     }
 
     fn update_star_evolution(&mut self) {
+        // Skip expensive star evolution when in high-count performance mode to preserve
+        // frame time. This sacrifices star lifecycle fidelity under extreme N, but
+        // dramatically improves simulation responsiveness.
+        if self.bodies.len() > self.config.performance_body_count_threshold
+            && self.config.performance_high_count_mode
+        {
+            if std::env::var("PROFILE_RUNTIME").is_err() {
+                eprintln!(
+                    "⚠ Skipping update_star_evolution due to high body count: {} > {} (performance_high_count_mode)",
+                    self.bodies.len(),
+                    self.config.performance_body_count_threshold
+                );
+            }
+            return;
+        }
+
         use crate::astro::{StarStage, StarState};
         use crate::body::BodySegment;
         let mut sn_events: Vec<usize> = Vec::new();
@@ -1957,7 +2140,9 @@ impl Simulation {
                 }
             }
 
-            eprintln!("💥 Supernova: body_id={} ejecta_mass={:.3} remnant_mass={:.3}", progenitor.body_id, sn_mass, core_mass);
+            if std::env::var("PROFILE_RUNTIME").is_err() {
+                eprintln!("💥 Supernova: body_id={} ejecta_mass={:.3} remnant_mass={:.3}", progenitor.body_id, sn_mass, core_mass);
+            }
         }
     }
 

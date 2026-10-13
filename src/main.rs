@@ -272,6 +272,7 @@ fn config_hash(config: &config::InformationsConfig) -> u64 {
     hash ^= config.outer_radius.to_bits() as u64;
     hash ^= config.inner_radius.to_bits() as u64;
     hash ^= config.galaxy_separation_factor.to_bits() as u64;
+    hash ^= config.galaxy_count as u64;
     hash ^= config.accretion_spawn_rate.to_bits() as u64;
     hash ^= config.central_mass.to_bits() as u64;
     hash ^= config.collision_interval as u64;

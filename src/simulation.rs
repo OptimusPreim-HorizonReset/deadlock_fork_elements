@@ -15,6 +15,7 @@ use crate::galaxy::GalaxyState;
 use crate::timescales::TimescaleScheduler;
 use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use ultraviolet::{Vec2, Vec3};
 
 pub struct Simulation {
@@ -24,6 +25,8 @@ pub struct Simulation {
     pub octree: Octree,
     /// Cached per-galaxy snapshots (GalaxyState) for emergence and institution workflows
     pub galaxies: Vec<GalaxyState>,
+    /// Per-galaxy start indices inside the bodies Vec for slicing into GalaxyState snapshots.
+    galaxy_start_indices: Vec<usize>,
     /// Template used to derive accretion spawn parameters.
     accretion_template: GalaxyTemplate,
     config: InformationsConfig,
@@ -35,6 +38,15 @@ pub struct Simulation {
     equatorial_plane_normal: Vec3,
     /// Position through which the equatorial plane passes.
     equatorial_plane_center: Vec3,
+    // Cluster motion persisted state (per-cluster components and current velocities)
+    cluster_base_translations: Vec<Vec3>,
+    cluster_orbit_bases: Vec<Vec3>,
+    cluster_phases: Vec<f32>,
+    cluster_freqs: Vec<f32>,
+    /// Current per-cluster velocity applied each frame (updated by apply_cluster_motion)
+    cluster_velocities: Vec<Vec3>,
+    /// Mapping from body index -> cluster id assigned at spawn time
+    body_cluster_ids: Vec<usize>,
     next_body_id: u64,
     next_molecule_id: u64,
     molecular_bonds: Vec<MolecularBond>,
@@ -60,71 +72,372 @@ impl Simulation {
         }
         let config = config.clone();
 
-        let axis1 = Self::random_inclination_axis();
-        let axis2 = Self::random_inclination_axis();
-        let clockwise1 = fastrand::bool();
-        let clockwise2 = fastrand::bool();
+        // Determine how many galaxy pairs to create. The config.galaxy_count is interpreted
+        // as total galaxies arranged in pairs; round down to an even number of galaxies.
+        let pair_count = (config.galaxy_count / 2).max(1);
+        let total_galaxies = pair_count * 2;
 
-        let mut bodies1 =
-            accretion_template.generate_inclined(Vec2::zero(), Vec2::zero(), axis1, clockwise1);
-        let separation = accretion_template.outer_radius * config.galaxy_separation_factor;
-        let offset = Vec2::new(separation, 0.0);
-        let mut bodies2 =
-            accretion_template.generate_inclined(offset, Vec2::zero(), axis2, clockwise2);
+        // Scatter scale: scale with outer_radius and configured factor and the cube-root of pair count
+        let scatter_scale_max = accretion_template.outer_radius
+            * config.galaxy_volume_scatter_factor
+            * (pair_count as f32).powf(1.0 / 3.0);
 
-        if config.enable_elemental_galaxy_pair_mode && config.n > 1000 {
-            let atomic_numbers = if config.element_pair_atomic_numbers.is_empty() {
-                all_elements()
-                    .map(|element| element.atomic_number)
-                    .collect::<Vec<_>>()
+        let _separation = accretion_template.outer_radius * config.galaxy_separation_factor;
+
+        // Pre-compute elemental pairing lists if the mode is enabled (reuse across pairs)
+        let (atomic_numbers, core_candidates) = if config.enable_elemental_galaxy_pair_mode && config.n > 200 {
+            let nums = if config.element_pair_atomic_numbers.is_empty() {
+                all_elements().map(|element| element.atomic_number).collect::<Vec<_>>()
             } else {
                 config.element_pair_atomic_numbers.clone()
             };
-            let core_candidates = if config.element_pair_core_atomic_numbers.is_empty() {
-                atomic_numbers.clone()
+            let cores = if config.element_pair_core_atomic_numbers.is_empty() {
+                nums.clone()
             } else {
                 config.element_pair_core_atomic_numbers.clone()
             };
-            Self::assign_element_pair(&mut bodies1, &atomic_numbers, &core_candidates);
-            Self::assign_element_pair(&mut bodies2, &atomic_numbers, &core_candidates);
-            Self::remap_elemental_orbit_velocities(&mut bodies1, &config);
-            Self::remap_elemental_orbit_velocities(&mut bodies2, &config);
+            (nums, cores)
+        } else {
+            (Vec::new(), Vec::new())
+        };
+
+        let mut bodies: Vec<Body> = Vec::new();
+        let mut galaxy_start_indices: Vec<usize> = Vec::new();
+        let mut body_cluster_ids: Vec<usize> = Vec::new();
+
+        // Property variance increases with galaxy_count to produce more diverse morphologies
+        let property_variance_scale = 1.0 + config.galaxy_property_variance_factor * (config.galaxy_count as f32 / 50.0);
+
+        // Auto-enable clustering for larger galaxy counts, or obey explicit flag.
+        let cluster_enabled = config.galaxy_cluster_enabled || config.galaxy_count >= 50;
+        let cluster_count = if cluster_enabled {
+            config.galaxy_cluster_count.max(1).min(pair_count)
+        } else {
+            1usize
+        };
+
+        // Sample cluster centers (or a single global center) inside the scatter sphere.
+        let mut cluster_centers: Vec<Vec3> = Vec::with_capacity(cluster_count);
+        for _ in 0..cluster_count {
+            let u = fastrand::f32();
+            let r = scatter_scale_max * u.powf(1.0 / 3.0) * 0.6;
+            let cos_theta = 2.0 * fastrand::f32() - 1.0;
+            let sin_theta = (1.0 - cos_theta * cos_theta).max(0.0).sqrt();
+            let phi = fastrand::f32() * std::f32::consts::TAU;
+            let cx = r * sin_theta * phi.cos();
+            let cy = r * sin_theta * phi.sin();
+            let cz = r * cos_theta;
+            cluster_centers.push(Vec3::new(cx, cy, cz));
         }
 
-        let m1: f32 = bodies1.iter().map(|b| b.mass).sum();
-        let m2: f32 = bodies2.iter().map(|b| b.mass).sum();
-        let center1 = bodies1[0].pos;
-        let center2 = bodies2[0].pos;
-        let (v1, v2) = Self::galaxy_bulk_velocities(&config, m1, m2, center1, center2);
-        for body in &mut bodies1 {
-            body.vel += v1;
+        // Distribute pairs among clusters as evenly as possible.
+        let mut pairs_per_cluster = vec![pair_count / cluster_count; cluster_count];
+        for i in 0..(pair_count % cluster_count) {
+            pairs_per_cluster[i] += 1;
         }
-        for body in &mut bodies2 {
-            body.vel += v2;
+        let mut assigned_in_cluster = vec![0usize; cluster_count];
+
+        // Precompute a reference mass for separation scaling heuristics.
+        let avg_template_particle_mass = (accretion_template.particle_mass_range.0 + accretion_template.particle_mass_range.1) * 0.5;
+        let mass_ref = accretion_template.central_mass + accretion_template.n as f32 * avg_template_particle_mass;
+
+        // Global total body budget handling.
+        // Reserve one slot per galaxy for the central mass; the remaining budget is available for disk particles.
+        // If total_body_budget == 0 then no budget constraint is applied.
+        let (mut remaining_disk_budget, mut remaining_galaxy_slots): (isize, usize) = if config.total_body_budget > 0 {
+            let reserved_centers = total_galaxies as usize;
+            let available = config.total_body_budget.saturating_sub(reserved_centers);
+            (available as isize, total_galaxies)
+        } else {
+            (-1isize, total_galaxies)
+        };
+
+        // Precompute coherent cluster motion components.
+        // We store a small base translation and an orbital base vector for each cluster,
+        // plus randomized phase/frequency so the cluster velocities evolve over time.
+        let mut cluster_base_translations: Vec<Vec3> = Vec::with_capacity(cluster_count);
+        let mut cluster_orbit_bases: Vec<Vec3> = Vec::with_capacity(cluster_count);
+        let mut cluster_phases: Vec<f32> = Vec::with_capacity(cluster_count);
+        let mut cluster_freqs: Vec<f32> = Vec::with_capacity(cluster_count);
+        let mut cluster_init_vels: Vec<Vec3> = Vec::with_capacity(cluster_count);
+        for c in 0..cluster_count {
+            let cc = cluster_centers[c];
+            let r = cc.mag().max(1e-4);
+            // estimate cluster mass (approx. per-galaxy mass * number of galaxies in cluster)
+            let galaxies_in_cluster = (pairs_per_cluster[c] * 2) as f32;
+            let estimated_cluster_mass = mass_ref * galaxies_in_cluster;
+            // tangential direction around world origin (coherent swirling)
+            let reference = if cc.abs().x < 0.9 { Vec3::new(1.0, 0.0, 0.0) } else { Vec3::new(0.0, 1.0, 0.0) };
+            let mut tangent = cc.cross(reference);
+            if tangent.mag_sq() <= 1e-8 {
+                tangent = Vec3::new(-cc.y, cc.x, 0.0);
+            }
+            tangent = tangent.normalized();
+            // orbital base vector (unscaled)
+            let v_orbit_base = (estimated_cluster_mass / r).sqrt() * tangent * 0.5;
+            // small coherent translation for natural drift
+            let base_translation = Vec3::new(
+                (fastrand::f32() - 0.5) * 0.2,
+                (fastrand::f32() - 0.5) * 0.2,
+                (fastrand::f32() - 0.5) * 0.1,
+            ) * (scatter_scale_max * 0.005);
+            // randomize phase and slow frequency so evolution is visible but gradual
+            let phase = fastrand::f32() * std::f32::consts::TAU;
+            let freq = 0.0005 + fastrand::f32() * 0.002;
+            // initial velocity sample (used for initial assignment)
+            let init_v = (base_translation + v_orbit_base) * config.galaxy_cluster_motion_factor * (0.4 + fastrand::f32() * 0.6);
+
+            cluster_base_translations.push(base_translation);
+            cluster_orbit_bases.push(v_orbit_base);
+            cluster_phases.push(phase);
+            cluster_freqs.push(freq);
+            cluster_init_vels.push(init_v);
         }
 
-        let mut bodies = Vec::with_capacity(bodies1.len() + bodies2.len());
-        bodies.extend(bodies1);
-        let center2_idx = bodies.len();
-        bodies.extend(bodies2);
-        let next_body_id = Self::assign_body_ids(&mut bodies, 1);
+        let mut pair_centers_preview: Vec<Vec3> = Vec::new();
+        for _pair_index in 0..pair_count {
+            // choose which cluster this pair belongs to (first-fit)
+            let mut cid = 0usize;
+            for c in 0..cluster_count {
+                if assigned_in_cluster[c] < pairs_per_cluster[c] {
+                    cid = c;
+                    break;
+                }
+            }
+            assigned_in_cluster[cid] += 1;
 
-        let mut sim = Self {
+            // sample a local offset around the cluster center to get the pair center
+            let cluster_center = cluster_centers[cid];
+            let u = fastrand::f32();
+            let local_r = scatter_scale_max * config.galaxy_cluster_radius_factor * (pairs_per_cluster[cid] as f32).powf(1.0 / 3.0) * u.powf(1.0 / 3.0);
+            let cos_theta = 2.0 * fastrand::f32() - 1.0;
+            let sin_theta = (1.0 - cos_theta * cos_theta).max(0.0).sqrt();
+            let phi = fastrand::f32() * std::f32::consts::TAU;
+            let ox = local_r * sin_theta * phi.cos();
+            let oy = local_r * sin_theta * phi.sin();
+            let oz = local_r * cos_theta;
+            let pair_center = cluster_center + Vec3::new(ox, oy, oz);
+            if pair_centers_preview.len() < 8 {
+                pair_centers_preview.push(pair_center);
+            }
+
+            // choose a (numerically robust) random separation direction
+            let mut dir = Vec3::new(
+                fastrand::f32() - 0.5,
+                fastrand::f32() - 0.5,
+                fastrand::f32() - 0.5,
+            );
+            if dir.mag_sq() <= 1e-8 {
+                dir = Vec3::new(1.0, 0.0, 0.0);
+            } else {
+                dir = dir.normalized();
+            }
+
+            // Create per-galaxy template variants to increase morphological diversity with higher counts.
+            let mut t1 = accretion_template.clone();
+            let mut t2 = accretion_template.clone();
+            // Property variance around 1.0 is controlled by galaxy_property_variance_factor.
+            // Use (property_variance_scale - 1.0) so a neutral config (scale == 1.0) produces no randomness.
+            let amp1 = (fastrand::f32() - 0.5) * 2.0 * ((property_variance_scale - 1.0) * 0.5);
+            let amp2 = (fastrand::f32() - 0.5) * 2.0 * ((property_variance_scale - 1.0) * 0.5);
+            let mult1 = (1.0 + amp1).clamp(0.25, 4.0);
+            let mult2 = (1.0 + amp2).clamp(0.25, 4.0);
+            t1.n = ((accretion_template.n as f32) * mult1).round() as usize;
+            t2.n = ((accretion_template.n as f32) * mult2).round() as usize;
+            // Allocate per-galaxy disk particle counts from the remaining global budget.
+            let orig_t1_n = t1.n;
+            if remaining_disk_budget >= 0 {
+                let fair_share = if remaining_galaxy_slots > 0 && remaining_disk_budget > 0 {
+                    (remaining_disk_budget as f32 / remaining_galaxy_slots as f32).floor() as usize
+                } else {
+                    0usize
+                };
+                let alloc = orig_t1_n.min(fair_share);
+                t1.n = alloc;
+                if t1.n != orig_t1_n {
+                    eprintln!("⚠️ Galaxy disk particle count capped by total_body_budget: requested {} -> allocated {}", orig_t1_n, t1.n);
+                }
+                remaining_disk_budget -= t1.n as isize;
+                remaining_galaxy_slots = remaining_galaxy_slots.saturating_sub(1);
+            } else {
+                // no global budget constraint
+                remaining_galaxy_slots = remaining_galaxy_slots.saturating_sub(1);
+            }
+
+            let orig_t2_n = t2.n;
+            if remaining_disk_budget >= 0 {
+                let fair_share = if remaining_galaxy_slots > 0 && remaining_disk_budget > 0 {
+                    (remaining_disk_budget as f32 / remaining_galaxy_slots as f32).floor() as usize
+                } else {
+                    0usize
+                };
+                let alloc = orig_t2_n.min(fair_share);
+                t2.n = alloc;
+                if t2.n != orig_t2_n {
+                    eprintln!("⚠️ Galaxy disk particle count capped by total_body_budget: requested {} -> allocated {}", orig_t2_n, t2.n);
+                }
+                remaining_disk_budget -= t2.n as isize;
+                remaining_galaxy_slots = remaining_galaxy_slots.saturating_sub(1);
+            } else {
+                remaining_galaxy_slots = remaining_galaxy_slots.saturating_sub(1);
+            }
+            t1.outer_radius = (accretion_template.outer_radius * mult1.sqrt()).max(2.0);
+            t2.outer_radius = (accretion_template.outer_radius * mult2.sqrt()).max(2.0);
+            t1.inner_radius = (accretion_template.inner_radius * mult1.sqrt()).max(1.0);
+            t2.inner_radius = (accretion_template.inner_radius * mult2.sqrt()).max(1.0);
+            t1.central_mass = accretion_template.central_mass * (1.0 + (fastrand::f32() - 0.5) * property_variance_scale * 0.5);
+            t2.central_mass = accretion_template.central_mass * (1.0 + (fastrand::f32() - 0.5) * property_variance_scale * 0.5);
+            let pmr1 = (
+                accretion_template.particle_mass_range.0 * (1.0 + amp1 * 0.4),
+                accretion_template.particle_mass_range.1 * (1.0 + amp1 * 0.4),
+            );
+            let pmr2 = (
+                accretion_template.particle_mass_range.0 * (1.0 + amp2 * 0.4),
+                accretion_template.particle_mass_range.1 * (1.0 + amp2 * 0.4),
+            );
+            t1.particle_mass_range = pmr1;
+            t2.particle_mass_range = pmr2;
+            t1.spin_speed_multiplier = accretion_template.spin_speed_multiplier * (1.0 + (fastrand::f32() - 0.5) * 0.5 * property_variance_scale);
+            t2.spin_speed_multiplier = accretion_template.spin_speed_multiplier * (1.0 + (fastrand::f32() - 0.5) * 0.5 * property_variance_scale);
+
+
+            // Estimate per-galaxy masses using the per-template averages (used for mass-weighted separation)
+            let m1_est = t1.central_mass + t1.n as f32 * ((t1.particle_mass_range.0 + t1.particle_mass_range.1) * 0.5);
+            let m2_est = t2.central_mass + t2.n as f32 * ((t2.particle_mass_range.0 + t2.particle_mass_range.1) * 0.5);
+
+            // separation can be mass-weighted if enabled
+            let mut pair_separation = accretion_template.outer_radius * config.galaxy_separation_factor;
+            if config.galaxy_mass_weighted_separation {
+                let ratio = ((m1_est + m2_est) / (mass_ref * 2.0)).max(0.25);
+                let scale = ratio.powf(config.galaxy_separation_mass_exponent);
+                pair_separation *= scale.clamp(0.5, 8.0);
+            }
+
+            let center1 = pair_center + dir * (pair_separation * 0.5);
+            let center2 = pair_center - dir * (pair_separation * 0.5);
+
+            // random inclinations and rotation sense for each galaxy
+            let axis1 = Self::random_inclination_axis();
+            let axis2 = Self::random_inclination_axis();
+            let clockwise1 = fastrand::bool();
+            let clockwise2 = fastrand::bool();
+
+            // generate both galaxy bodies (XY center passed to generator; we'll add Z offset)
+            let mut g1 = t1.generate_inclined(Vec2::new(center1.x, center1.y), Vec2::zero(), axis1, clockwise1);
+            for b in &mut g1 {
+                b.pos.z += center1.z;
+            }
+
+            let mut g2 = t2.generate_inclined(Vec2::new(center2.x, center2.y), Vec2::zero(), axis2, clockwise2);
+            for b in &mut g2 {
+                b.pos.z += center2.z;
+            }
+
+            // Elemental pairing and velocity remapping per galaxy when enabled
+            if !atomic_numbers.is_empty() {
+                Self::assign_element_pair(&mut g1, &atomic_numbers, &core_candidates);
+                Self::assign_element_pair(&mut g2, &atomic_numbers, &core_candidates);
+                Self::remap_elemental_orbit_velocities(&mut g1, &config);
+                Self::remap_elemental_orbit_velocities(&mut g2, &config);
+            }
+
+            // compute actual masses and choose bulk velocities (optionally prefer circular binaries)
+            let m1: f32 = g1.iter().map(|b| b.mass).sum();
+            let m2: f32 = g2.iter().map(|b| b.mass).sum();
+            let center1_pos = g1[0].pos;
+            let center2_pos = g2[0].pos;
+            let (v1, v2) = if fastrand::f32() < config.galaxy_binary_circular_fraction {
+                // Near-circular relative velocity for mutual orbit around pair center
+                let dist = (center2_pos - center1_pos).mag().max(f32::EPSILON);
+                let v_circ = ((m1 + m2) / dist).sqrt();
+                let dir_rel = (center2_pos - center1_pos).normalized();
+                let reference = if dir_rel.abs().x < 0.9 { Vec3::new(1.0, 0.0, 0.0) } else { Vec3::new(0.0, 1.0, 0.0) };
+                let mut perp = dir_rel.cross(reference);
+                if perp.mag_sq() <= 1e-8 { perp = Vec3::new(-dir_rel.y, dir_rel.x, 0.0); }
+                let perp = perp.normalized();
+                let sign = if fastrand::bool() { 1.0 } else { -1.0 };
+                let v_rel = perp * v_circ * sign;
+                let v1 = v_rel * (m2 / (m1 + m2));
+                let v2 = -v_rel * (m1 / (m1 + m2));
+                (v1, v2)
+            } else {
+                Self::galaxy_bulk_velocities(&config, m1, m2, center1_pos, center2_pos)
+            };
+
+            for b in &mut g1 { b.vel += v1; }
+            for b in &mut g2 { b.vel += v2; }
+
+            // cluster-level bulk motion added on top of pair velocities
+            // Use precomputed, coherent cluster initial velocities so members of the same cluster
+            // move naturally together. Add a small per-pair jitter to avoid perfectly rigid motion.
+            let cluster_vel = if cluster_enabled {
+                let base = cluster_init_vels[cid];
+                let jitter = Vec3::new(
+                    (fastrand::f32() - 0.5) * 0.02,
+                    (fastrand::f32() - 0.5) * 0.02,
+                    (fastrand::f32() - 0.5) * 0.01,
+                ) * scatter_scale_max * 0.001;
+                base + jitter
+            } else {
+                Vec3::zero()
+            };
+            for b in &mut g1 { b.vel += cluster_vel; }
+            for b in &mut g2 { b.vel += cluster_vel; }
+
+            // append bodies and record start indices for cache/slicing
+            galaxy_start_indices.push(bodies.len());
+            // record cluster id for each body being appended so runtime can apply coherent cluster motion
+            for _ in 0..g1.len() { body_cluster_ids.push(cid); }
+            bodies.extend(g1);
+            galaxy_start_indices.push(bodies.len());
+            for _ in 0..g2.len() { body_cluster_ids.push(cid); }
+            bodies.extend(g2);
+        }
+
+        if config.galaxy_log_centers_on_init {
+            eprintln!(
+                "🛰️ Galaxy init: clusters={} pairs={} sample_pair_centers={:?}",
+                cluster_count,
+                pair_count,
+                pair_centers_preview
+            );
+            eprintln!(
+                "🛰️ Cluster centers ({}): {:?}",
+                cluster_centers.len().min(8),
+                cluster_centers.iter().take(8).collect::<Vec<_>>()
+            );
+        }
+
+        // Ensure we have sensible center indices for legacy code paths.
+        let center1_idx = *galaxy_start_indices.get(0).unwrap_or(&0);
+        let center2_idx = *galaxy_start_indices.get(1).unwrap_or(&usize::MAX);
+        let next_body_id = Self::assign_body_ids(&mut bodies, 1);
+        let mut sim = Self {
             dt,
             frame: 0,
             bodies,
             octree: Octree::new(theta, epsilon),
             accretion_template,
             config,
-            center1_idx: 0,
+            center1_idx,
             center2_idx,
             equatorial_plane_normal: Vec3::new(0.0, 0.0, 1.0),
             equatorial_plane_center: Vec3::zero(),
+            // Persist the per-cluster motion components computed at initialization
+            cluster_base_translations,
+            cluster_orbit_bases,
+            cluster_phases,
+            cluster_freqs,
+            // Start the dynamic cluster velocity to the initial sample for immediate effect
+            cluster_velocities: cluster_init_vels,
+            // Mapping of body index -> cluster id for runtime updates
+            body_cluster_ids,
             next_body_id,
             next_molecule_id: 1,
             molecular_bonds: Vec::new(),
             timescale_scheduler: TimescaleScheduler::new(),
             galaxies: Vec::new(),
+            galaxy_start_indices,
         };
 
         // Cache per-galaxy snapshots for emergence heuristics and other GPDM workflows
@@ -142,6 +455,42 @@ impl Simulation {
         next_id
     }
 
+    /// Insert a body while keeping body_cluster_ids synchronized.
+    /// Returns the index at which the body was inserted.
+    fn add_body_with_cluster(&mut self, mut body: Body, cid: Option<usize>) -> usize {
+        body.body_id = self.next_body_id;
+        self.next_body_id = self.next_body_id.saturating_add(1);
+        let assigned_cid = cid.unwrap_or(0usize);
+        self.body_cluster_ids.push(assigned_cid);
+        self.bodies.push(body);
+        self.bodies.len() - 1
+    }
+
+    /// Remove the body at `idx` and keep body_cluster_ids and center indices consistent.
+    /// Returns the removed body id if any.
+    fn remove_body_at(&mut self, idx: usize) -> Option<u64> {
+        if idx >= self.bodies.len() {
+            return None;
+        }
+        let removed_id = self.bodies[idx].body_id;
+        self.bodies.remove(idx);
+        if idx < self.body_cluster_ids.len() {
+            self.body_cluster_ids.remove(idx);
+        }
+        // Adjust center indices if they point past the removed index
+        if self.center1_idx == idx {
+            self.center1_idx = 0;
+        } else if self.center1_idx > idx {
+            self.center1_idx = self.center1_idx.saturating_sub(1);
+        }
+        if self.center2_idx == idx {
+            self.center2_idx = usize::MAX;
+        } else if self.center2_idx > idx {
+            self.center2_idx = self.center2_idx.saturating_sub(1);
+        }
+        Some(removed_id)
+    }
+
     /// Build cached per-galaxy snapshots from the current `bodies` vector.
     pub fn cache_galaxies(&mut self) {
         self.galaxies.clear();
@@ -149,8 +498,29 @@ impl Simulation {
             return;
         }
 
-        // Simple heuristic: if a second center index exists, split bodies there into two galaxies,
-        // otherwise treat entire body list as a single galaxy snapshot.
+        // If we have explicit per-galaxy start indices recorded at initialization, use them
+        // to slice the master `bodies` vector into GalaxyState snapshots. Otherwise fall back
+        // to the legacy two-galaxy heuristic.
+        if !self.galaxy_start_indices.is_empty() {
+            let mut gid: u64 = 1;
+            for (i, &start) in self.galaxy_start_indices.iter().enumerate() {
+                let end = if i + 1 < self.galaxy_start_indices.len() {
+                    self.galaxy_start_indices[i + 1]
+                } else {
+                    self.bodies.len()
+                };
+                if start >= end || start >= self.bodies.len() {
+                    continue;
+                }
+                let slice = self.bodies[start..end].to_vec();
+                self.galaxies.push(GalaxyState::new(gid, slice));
+                gid += 1;
+            }
+            return;
+        }
+
+        // Legacy behavior: split into two galaxies if a second center index exists, otherwise
+        // treat the full body list as a single galaxy snapshot.
         if self.center2_idx < self.bodies.len() && self.config.galaxy_count >= 2 {
             let mid = self.center2_idx.min(self.bodies.len());
             let first = self.bodies[..mid].to_vec();
@@ -163,7 +533,7 @@ impl Simulation {
         }
     }
 
-    fn recompute_institutions(&mut self) {
+    pub fn recompute_institutions(&mut self) {
         use std::collections::HashSet;
         let mut produced_ids: HashSet<u64> = HashSet::new();
         let mut produced_tables: Vec<crate::tables::Table> = Vec::new();
@@ -195,6 +565,39 @@ impl Simulation {
             "🟦 recompute_institutions: produced {} tables",
             produced_ids.len()
         );
+    }
+
+    // Apply a gentle, coherent per-cluster motion field each frame. Cluster velocities are
+    // derived from a small base translation and an orbital base vector computed at init;
+    // they evolve slowly in time (low-frequency) and are applied as a small acceleration
+    // to members of the cluster so movement looks natural without destabilizing the system.
+    fn apply_cluster_motion(&mut self) {
+        if self.cluster_velocities.is_empty() || self.body_cluster_ids.is_empty() {
+            return;
+        }
+        let t = self.frame as f32;
+        // Evolve per-cluster velocities smoothly
+        let blend = 0.02_f32; // smoothing factor toward desired
+        for cid in 0..self.cluster_velocities.len() {
+            let phase = self.cluster_phases[cid];
+            let freq = self.cluster_freqs[cid];
+            let wobble = (t * freq + phase).sin();
+            let desired = (self.cluster_base_translations[cid] + self.cluster_orbit_bases[cid] * wobble)
+                * self.config.galaxy_cluster_motion_factor;
+            self.cluster_velocities[cid] = self.cluster_velocities[cid] * (1.0 - blend) + desired * blend;
+        }
+
+        // Apply a small acceleration proportional to the current cluster velocity to each body
+        // in the corresponding cluster. Keep the influence very small to avoid destabilizing
+        // fine-grained internal orbits inside galaxies.
+        let influence = 0.003_f32;
+        let dt = self.dt.max(1e-6);
+        for (idx, body) in self.bodies.iter_mut().enumerate() {
+            let cid = *self.body_cluster_ids.get(idx).unwrap_or(&0);
+            if cid >= self.cluster_velocities.len() { continue; }
+            let add_acc = self.cluster_velocities[cid] * (influence / dt);
+            body.acc += add_acc;
+        }
     }
 
     fn random_inclination_axis() -> Vec3 {
@@ -312,6 +715,7 @@ impl Simulation {
         let mut config_template = accretion_template;
         config_template.n = 0;
         let next_body_id = Self::assign_body_ids(&mut bodies, 1);
+        let body_count = bodies.len();
 
         let mut sim = Self {
             dt,
@@ -324,11 +728,19 @@ impl Simulation {
             center2_idx: usize::MAX,
             equatorial_plane_normal: Vec3::new(0.0, 0.0, 1.0),
             equatorial_plane_center,
+            // Cluster motion persisted state - empty for atom mode
+            cluster_base_translations: Vec::new(),
+            cluster_orbit_bases: Vec::new(),
+            cluster_phases: Vec::new(),
+            cluster_freqs: Vec::new(),
+            cluster_velocities: Vec::new(),
+            body_cluster_ids: vec![0usize; body_count],
             next_body_id,
             next_molecule_id: 1,
             molecular_bonds: Vec::new(),
             timescale_scheduler: TimescaleScheduler::new(),
             galaxies: Vec::new(),
+            galaxy_start_indices: vec![0],
         };
 
         sim.cache_galaxies();
@@ -815,7 +1227,19 @@ impl Simulation {
         };
 
         let direction = (center2 - center1).normalized();
-        let perp = Vec3::new(-direction.y, direction.x, 0.0).normalized();
+        // Build a true perpendicular vector to `direction` in 3D. Prefer an X-reference
+        // unless the direction is nearly parallel to X, then use Y. Fallback to the old
+        // XY-perp if numerical degeneracy occurs.
+        let reference = if direction.abs().x < 0.9 {
+            Vec3::new(1.0, 0.0, 0.0)
+        } else {
+            Vec3::new(0.0, 1.0, 0.0)
+        };
+        let mut perp = direction.cross(reference);
+        if perp.mag_sq() <= 1e-8 {
+            perp = Vec3::new(-direction.y, direction.x, 0.0);
+        }
+        let perp = perp.normalized();
         let sign = if fastrand::bool() { 1.0 } else { -1.0 };
 
         let v_radial = direction * escape_speed * speed_factor;
@@ -858,6 +1282,10 @@ impl Simulation {
         if renderer::SPAWN_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
             self.spawn_accretion();
         }
+        if self.config.enable_flow_dynamics_model {
+            // deterministically detect dense gas cells and spawn proto-stars conservatively
+            self.process_gas_collapse_and_spawn();
+        }
         // Periodically compute emergence heuristics to instantiate institutions (M3+ behavior)
         if self
             .timescale_scheduler
@@ -870,6 +1298,10 @@ impl Simulation {
             }
         }
 
+        self.apply_cluster_motion();
+        if self.config.enable_flow_dynamics_model {
+            self.update_star_evolution();
+        }
         self.frame += 1;
     }
 
@@ -879,8 +1311,11 @@ impl Simulation {
 
     pub fn attract(&mut self) {
         let oct = Oct::new_containing(&self.bodies);
-        let reserve_nodes = self.bodies.len() * 6;
-        let reserve_parents = self.bodies.len();
+        // Allow tuning the octree reserve size via configuration to balance memory vs realloc
+        let reserve_factor = self.config.performance_octree_reserve_factor.max(1.0);
+        let reserve_nodes = ((self.bodies.len() as f32) * reserve_factor).ceil() as usize;
+        // parents typically fewer than leaf nodes; reserve a fraction of the factor
+        let reserve_parents = ((self.bodies.len() as f32) * (reserve_factor * 0.25)).ceil() as usize;
         self.octree.reserve(reserve_nodes, reserve_parents);
         self.octree.clear(oct);
 
@@ -1058,9 +1493,7 @@ impl Simulation {
             return;
         }
 
-        let mut cells = Vec::with_capacity(total_cells);
-        cells.resize_with(total_cells, Vec::new);
-
+        // Build a sparse map of occupied grid cells to avoid large empty allocations
         let cell_index = |pos: Vec3| {
             let ix = ((pos.x - min_x) / cell_size).floor() as isize;
             let iy = ((pos.y - min_y) / cell_size).floor() as isize;
@@ -1068,52 +1501,89 @@ impl Simulation {
             ((ix as usize) * size_y + iy as usize) * size_z + iz as usize
         };
 
+        let mut cell_map: HashMap<usize, Vec<usize>> = HashMap::new();
         for (index, body) in self.bodies.iter().enumerate() {
             let idx = cell_index(body.pos);
-            if idx < cells.len() {
-                cells[idx].push(index);
+            if idx < total_cells {
+                cell_map.entry(idx).or_default().push(index);
             }
         }
 
-        for x in 0..size_x {
-            for y in 0..size_y {
-                for z in 0..size_z {
-                    let cell_idx = (x * size_y + y) * size_z + z;
-                    let indices = &cells[cell_idx];
-                    if indices.is_empty() {
-                        continue;
-                    }
+        if cell_map.is_empty() {
+            return;
+        }
 
+        let cell_map = Arc::new(cell_map);
+        let occupied_cells: Vec<usize> = cell_map.as_ref().keys().copied().collect();
+
+        // Collect candidate pairs in parallel (no locking), then resolve sequentially to avoid data races
+        let pairs_by_cell: Vec<Vec<(usize, usize)>> = occupied_cells
+            .par_iter()
+            .map(|&cell_idx| {
+                let map_ref = &*cell_map;
+                let size_y_sz = size_y;
+                let size_z_sz = size_z;
+                let size_x_sz = size_x;
+
+                let ix = cell_idx / (size_y_sz * size_z_sz);
+                let rem = cell_idx % (size_y_sz * size_z_sz);
+                let iy = rem / size_z_sz;
+                let iz = rem % size_z_sz;
+
+                let mut local_pairs: Vec<(usize, usize)> = Vec::new();
+                if let Some(indices) = map_ref.get(&cell_idx) {
                     for dx in 0..=1 {
                         for dy in 0..=1 {
                             for dz in 0..=1 {
-                                let nx = x + dx;
-                                let ny = y + dy;
-                                let nz = z + dz;
-                                if nx >= size_x || ny >= size_y || nz >= size_z {
+                                let nx = ix + dx;
+                                let ny = iy + dy;
+                                let nz = iz + dz;
+                                if nx >= size_x_sz || ny >= size_y_sz || nz >= size_z_sz {
                                     continue;
                                 }
-                                let neighbor_idx = (nx * size_y + ny) * size_z + nz;
-                                if neighbor_idx >= cells.len() {
-                                    continue;
-                                }
-                                let neighbor_indices = &cells[neighbor_idx];
-                                if neighbor_indices.is_empty() {
-                                    continue;
-                                }
-
-                                for &i in indices {
-                                    for &j in neighbor_indices {
-                                        if neighbor_idx == cell_idx && i >= j {
-                                            continue;
+                                let neighbor_idx = (nx * size_y_sz + ny) * size_z_sz + nz;
+                                if let Some(neighbor_indices) = map_ref.get(&neighbor_idx) {
+                                    for &i in indices {
+                                        for &j in neighbor_indices {
+                                            if neighbor_idx == cell_idx && i >= j {
+                                                continue;
+                                            }
+                                            if i == j {
+                                                continue;
+                                            }
+                                            local_pairs.push((i, j));
                                         }
-                                        self.resolve(i, j, &mut center_merge_pair);
                                     }
                                 }
                             }
                         }
                     }
                 }
+                local_pairs
+            })
+            .collect();
+
+        let index_pairs: Vec<(usize, usize)> = pairs_by_cell.into_iter().flatten().collect();
+
+        // Convert index pairs to stable id pairs to avoid index invalidation if bodies are reordered later
+        let mut id_pairs: Vec<(u64, u64)> = Vec::with_capacity(index_pairs.len());
+        for (i, j) in index_pairs {
+            if i < self.bodies.len() && j < self.bodies.len() {
+                id_pairs.push((self.bodies[i].body_id, self.bodies[j].body_id));
+            }
+        }
+
+        // Map current body_id -> index for stable lookups during sequential resolution
+        let id_index_map: HashMap<u64, usize> = self
+            .bodies
+            .iter()
+            .enumerate()
+            .map(|(idx, body)| (body.body_id, idx))
+            .collect();
+
+        for (id1, id2) in id_pairs {
+            if let (Some(&i), Some(&j)) = (id_index_map.get(&id1), id_index_map.get(&id2)) {
+                self.resolve(i, j, &mut center_merge_pair);
             }
         }
 
@@ -1129,7 +1599,7 @@ impl Simulation {
             } else {
                 self.config.element_atomic_numbers.clone()
             }
-        } else if self.config.enable_elemental_galaxy_pair_mode && self.config.n > 1000 {
+        } else if self.config.enable_elemental_galaxy_pair_mode && self.config.n > 200 {
             if self.config.element_pair_atomic_numbers.is_empty() {
                 all_elements()
                     .map(|element| element.atomic_number)
@@ -1166,25 +1636,6 @@ impl Simulation {
         } else {
             Some(element_numbers[fastrand::usize(0..element_numbers.len())])
         };
-        let spawn_center = if self.config.enable_galactic_atom_simulation {
-            atomic_number
-                .and_then(|selected| {
-                    self.bodies
-                        .iter()
-                        .find(|body| {
-                            body.element_atomic_number == Some(selected)
-                                && body.segment == BodySegment::Core
-                        })
-                        .map(|body| body.pos)
-                })
-                .unwrap_or_else(Vec3::zero)
-        } else {
-            self.bodies
-                .get(self.center1_idx)
-                .map(|body| body.pos)
-                .unwrap_or_else(Vec3::zero)
-        };
-
         let (mass_min, mass_max) = self.accretion_template.particle_mass_range;
 
         // Determine spawn center body and its rotation axis + direction, prefer element-specific core in atom mode.
@@ -1244,6 +1695,22 @@ impl Simulation {
 
         let softening = self.config.epsilon * self.config.softening_scale_factor;
         let softening_sq = softening * softening;
+        // Ensure the octree is built before querying acceleration. In unit tests spawn_accretion()
+        // may be invoked directly without a prior attract() call, leaving the octree empty.
+        if self.octree.nodes.is_empty() {
+            let oct = Oct::new_containing(&self.bodies);
+            let reserve_factor = self.config.performance_octree_reserve_factor.max(1.0);
+            let reserve_nodes = ((self.bodies.len() as f32) * reserve_factor).ceil() as usize;
+            let reserve_parents = ((self.bodies.len() as f32) * (reserve_factor * 0.25)).ceil() as usize;
+            self.octree.reserve(reserve_nodes, reserve_parents);
+            self.octree.clear(oct);
+            for b in &self.bodies {
+                let eff_mass = b.mass * Self::elemental_gravity_scale(b, &self.config);
+                let momentum = Vec3::new(b.vel.x * eff_mass, b.vel.y * eff_mass, b.vel.z * eff_mass);
+                self.octree.insert_delegate(b.pos, eff_mass, momentum, Vec3::zero());
+            }
+            self.octree.propagate();
+        }
         let acc = self.octree.acc(spawn_pos, softening_sq);
 
         let projected_offset = offset - rotation_axis * offset.dot(rotation_axis);
@@ -1267,9 +1734,9 @@ impl Simulation {
         if let Some(atomic_number) = atomic_number {
             body = body.with_element(atomic_number, BodySegment::Accretion);
         }
-        body = body.with_id(self.next_body_id);
-        self.next_body_id = self.next_body_id.saturating_add(1);
-        self.bodies.push(body);
+        // inherit cluster membership from spawn center if available and insert via helper
+        let cid = *self.body_cluster_ids.get(spawn_center_idx).unwrap_or(&0);
+        self.add_body_with_cluster(body, Some(cid));
     }
 
     fn process_manual_spawns(&mut self) {
@@ -1300,9 +1767,198 @@ impl Simulation {
         if let Some(atomic_number) = atomic_number {
             body = body.with_element(atomic_number, BodySegment::ManualSpawn);
         }
-        body.body_id = self.next_body_id;
-        self.next_body_id = self.next_body_id.saturating_add(1);
-        self.bodies.push(body);
+        // choose cluster id by nearest existing body if available, else default 0
+        let cid = if !self.bodies.is_empty() && !self.body_cluster_ids.is_empty() {
+            let mut best_idx = 0usize;
+            let mut best_d2 = (self.bodies[0].pos - request.position).mag_sq();
+            for (i, b) in self.bodies.iter().enumerate().skip(1) {
+                let d2 = (b.pos - request.position).mag_sq();
+                if d2 < best_d2 {
+                    best_idx = i;
+                    best_d2 = d2;
+                }
+            }
+            *self.body_cluster_ids.get(best_idx).unwrap_or(&0)
+        } else {
+            0usize
+        };
+        self.add_body_with_cluster(body, Some(cid));
+    }
+
+    fn candidate_gas_collapse_detect(&self, body_idx: usize) -> Option<(usize, f32)> {
+        // Lightweight, deterministic collapse candidate probe: returns (body_idx, suggested_star_mass)
+        if body_idx >= self.bodies.len() { return None; }
+        let b = &self.bodies[body_idx];
+        use crate::body::BodySegment;
+        if b.segment != BodySegment::Gas { return None; }
+        if b.gas_density <= self.config.gas_ignition_density { return None; }
+        // Coarse region cell coordinates for deterministic seeding
+        let scale = self.config.gas_h_max.max(1.0);
+        let xi = (b.pos.x / scale).floor() as i64;
+        let yi = (b.pos.y / scale).floor() as i64;
+        let zi = (b.pos.z / scale).floor() as i64;
+        let seed = crate::astro::region_seed(xi, yi, zi, self.frame as u64, self.config.total_body_budget as u64 ^ 0xC0FFEEu64);
+        let mut rng = fastrand::Rng::with_seed(seed);
+        // Fraction of local gas to convert in a single collapse event (capped)
+        let frag_frac = self.config.gas_condensation_strength.clamp(0.01, 0.9);
+        let spawn_mass = (b.mass * frag_frac).min(self.config.element_orbital_mass_unit.max(1.0) * 100.0);
+        // Sample a stellar mass from an IMF-like power-law (Salpeter ~2.35)
+        let star_mass = crate::astro::sample_powerlaw_mass(&mut rng, self.config.element_orbital_mass_unit.max(0.01), spawn_mass.max(0.1), 2.35);
+        Some((body_idx, star_mass))
+    }
+
+    /// Simple deterministic star lifecycle updater — lightweight, safe, and parameterized
+    /// Uses StarState carried by Body.star_state (if present). When fuel is exhausted,
+    /// core-collapse supernovae are scheduled for high-mass stars and low-mass stars become remnants.
+    fn process_gas_collapse_and_spawn(&mut self) {
+        use crate::body::BodySegment;
+        use crate::astro::StarState;
+        let mut spawns: Vec<(usize, f32)> = Vec::new();
+        // Collect candidates without mutating bodies during iteration
+        for idx in 0..self.bodies.len() {
+            if let Some((bi, star_mass)) = self.candidate_gas_collapse_detect(idx) {
+                spawns.push((bi, star_mass));
+            }
+        }
+
+        for (gas_idx, star_mass) in spawns {
+            if gas_idx >= self.bodies.len() { continue; }
+            if self.bodies[gas_idx].segment != BodySegment::Gas { continue; }
+            let available = self.bodies[gas_idx].mass.max(0.0);
+            let convert_mass = star_mass.min(available * 0.8).max(0.0);
+            if convert_mass < self.config.element_orbital_mass_unit * 0.05 {
+                continue; // too small to bother
+            }
+
+            // drain gas mass and update local gas properties conservatively
+            self.bodies[gas_idx].mass = (self.bodies[gas_idx].mass - convert_mass).max(0.0);
+            self.bodies[gas_idx].gas_density = self.bodies[gas_idx].gas_density.max(0.0) * 0.5;
+
+            // spawn a new star body near the gas parcel
+            let spawn_pos = self.bodies[gas_idx].pos
+                + Vec3::new((fastrand::f32() - 0.5) * 0.2, (fastrand::f32() - 0.5) * 0.2, (fastrand::f32() - 0.5) * 0.1)
+                    * self.bodies[gas_idx].effective_radius().max(1.0);
+            let spawn_vel = self.bodies[gas_idx].vel
+                + Vec3::new((fastrand::f32() - 0.5) * 0.02, (fastrand::f32() - 0.5) * 0.02, 0.0);
+
+            let mut star_body = Body::new(
+                spawn_pos,
+                spawn_vel,
+                convert_mass,
+                convert_mass.cbrt().max(0.5),
+                0.0,
+                Vec3::new(0.0, 0.0, 1.0),
+            );
+            star_body.segment = BodySegment::ManualSpawn;
+            star_body.star_state = Some(StarState::new(convert_mass, self.bodies[gas_idx].gas_temperature.max(0.001)));
+            // inherit cluster membership of the gas cell if available and insert via helper
+            let cid = *self.body_cluster_ids.get(gas_idx).unwrap_or(&0);
+            self.add_body_with_cluster(star_body, Some(cid));
+
+            eprintln!("✨ Proto-star spawned from gas body {} mass={:.3}", self.bodies[gas_idx].body_id, convert_mass);
+        }
+    }
+
+    fn update_star_evolution(&mut self) {
+        use crate::astro::{StarStage, StarState};
+        use crate::body::BodySegment;
+        let mut sn_events: Vec<usize> = Vec::new();
+        let dt = self.dt.max(0.0);
+        for idx in 0..self.bodies.len() {
+            if let Some(mut star) = self.bodies[idx].star_state {
+                // Advance age and consume fuel proportional to luminosity (scaled small)
+                star.age += dt;
+                let burn = star.luminosity * dt * 1e-3; // small burn rate to keep timescales reasonable
+                star.fuel -= burn;
+
+                // Basic stage transitions (heuristic)
+                if star.stage == StarStage::Protostar && star.age > 10.0 {
+                    star.stage = StarStage::MainSequence;
+                } else if star.stage == StarStage::MainSequence && star.age > (50.0 * (1.0 / star.mass.max(0.1))) {
+                    star.stage = StarStage::RedGiant;
+                } else if star.stage == StarStage::RedGiant && star.fuel <= 0.0 {
+                    star.stage = StarStage::PostAGB;
+                }
+
+                // End-of-life decision
+                if star.fuel <= 0.0 {
+                    if star.mass >= 8.0 {
+                        // schedule SN for this index
+                        sn_events.push(idx);
+                    } else {
+                        // low-mass remnant (white-dwarf like): use neutron remnant placeholder
+                        star.stage = StarStage::RemnantNeutron;
+                    }
+                    star.fuel = 0.0;
+                }
+
+                self.bodies[idx].star_state = Some(star);
+            }
+        }
+
+        if !sn_events.is_empty() {
+            self.process_supernovae_simple(&sn_events);
+        }
+    }
+
+    /// Very lightweight supernova handling: reduces progenitor mass to a compact remnant,
+    /// injects a modest fraction of ejecta mass and momentum into nearby gas bodies,
+    /// and increases their gas_density / metallicity slightly. Intentionally conservative
+    /// scaling to avoid destabilizing the N-body dynamics.
+    fn process_supernovae_simple(&mut self, events: &[usize]) {
+        use crate::body::BodySegment;
+        for &idx in events {
+            if idx >= self.bodies.len() { continue; }
+            let progenitor = self.bodies[idx];
+            let sn_mass = progenitor.mass * 0.8; // ejecta
+            let core_mass = (progenitor.mass - sn_mass).max(0.05);
+
+            // Set remnant properties
+            let remnant_stage = if progenitor.star_state.map(|s| s.mass).unwrap_or(0.0) > 20.0 {
+                crate::astro::StarStage::RemnantBlackHole
+            } else {
+                crate::astro::StarStage::RemnantNeutron
+            };
+
+            let remnant_state = crate::astro::StarState {
+                mass: core_mass,
+                age: 0.0,
+                stage: remnant_stage,
+                fuel: 0.0,
+                core_mass: core_mass,
+                metallicity: progenitor.star_state.map(|s| s.metallicity).unwrap_or(0.02),
+                luminosity: 0.0,
+            };
+
+            self.bodies[idx].mass = core_mass;
+            self.bodies[idx].star_state = Some(remnant_state);
+
+            // Distribute a conservative fraction of ejecta to nearby gas bodies
+            let ejecta_to_distribute = sn_mass * 0.6; // keep some mass untracked
+            if ejecta_to_distribute <= 0.0 { continue; }
+            let radius = 200.0_f32.max(progenitor.effective_radius() * 10.0);
+            for j in 0..self.bodies.len() {
+                if j == idx { continue; }
+                let dist = (self.bodies[j].pos - progenitor.pos).mag();
+                if dist <= radius {
+                    if self.bodies[j].segment == BodySegment::Gas {
+                        // spread fraction by distance (simple kernel)
+                        let frac = (1.0 - (dist / radius)).clamp(0.0, 1.0) * 0.2; // modest fraction
+                        let added_mass = ejecta_to_distribute * frac;
+                        self.bodies[j].mass += added_mass;
+                        self.bodies[j].gas_density += added_mass / (1.0 + self.bodies[j].effective_radius());
+                        // metallicity bump stored in gas_temperature as a cheap channel? prefer to skip global invasive changes
+                        self.bodies[j].gas_temperature += 0.01 * frac; // small energy injection
+                        // small velocity kick radially outward
+                        let mut _dir_vec = self.bodies[j].pos - progenitor.pos;
+                        let dir = if _dir_vec.mag_sq() > 1e-12 { _dir_vec.normalized() } else { Vec3::zero() };
+                        self.bodies[j].vel += dir * (10.0 * frac);
+                    }
+                }
+            }
+
+            eprintln!("💥 Supernova: body_id={} ejecta_mass={:.3} remnant_mass={:.3}", progenitor.body_id, sn_mass, core_mass);
+        }
     }
 
     fn resolve(&mut self, i: usize, j: usize, center_merge_pair: &mut Option<(usize, usize)>) {
@@ -1465,11 +2121,11 @@ impl Simulation {
         merged_body.body_id = b1.body_id;
         merged_body.molecule_id = b1.molecule_id.or(b2.molecule_id);
         self.bodies[first] = merged_body;
-        let removed_body_id = self.bodies[second].body_id;
-        self.bodies.remove(second);
-        self.molecular_bonds.retain(|bond| {
-            bond.first_body_id != removed_body_id && bond.second_body_id != removed_body_id
-        });
+        if let Some(removed_body_id) = self.remove_body_at(second) {
+            self.molecular_bonds.retain(|bond| {
+                bond.first_body_id != removed_body_id && bond.second_body_id != removed_body_id
+            });
+        }
 
         self.center1_idx = first;
         self.center2_idx = usize::MAX;
@@ -1500,6 +2156,58 @@ mod tests {
     use ultraviolet::Vec3;
 
     #[test]
+    fn simulation_new_uses_galaxy_count() {
+        let mut cfg = InformationsConfig::default();
+        cfg.n = 10; // small per-galaxy particle count for fast tests
+        cfg.galaxy_count = 6; // even number -> 3 pairs / 6 galaxies total
+        cfg.enable_galactic_atom_simulation = false;
+        let sim = Simulation::new(&cfg);
+        assert_eq!(sim.galaxy_start_indices.len(), cfg.galaxy_count);
+    }
+
+    #[test]
+    fn spawn_accretion_alignment_matches_galaxy_plane() {
+        let mut cfg = InformationsConfig::default();
+        cfg.n = 10;
+        cfg.galaxy_count = 2;
+        cfg.accretion_spawn_rate = 1.0;
+        let mut sim = Simulation::new(&cfg);
+        // Ensure the runtime template will always spawn for the test
+        sim.accretion_template.accretion_spawn_rate = 1.0;
+        let spawn_center_idx = sim.center1_idx;
+        let rotation_axis_before = sim.bodies[spawn_center_idx].rotation_axis;
+        let old_len = sim.bodies.len();
+        sim.spawn_accretion();
+        assert_eq!(sim.bodies.len(), old_len + 1);
+        let new_body = sim.bodies.last().unwrap();
+        assert_eq!(new_body.rotation_axis, rotation_axis_before);
+    }
+
+    #[test]
+    fn cache_galaxies_slices_into_galaxy_states() {
+        let mut cfg = InformationsConfig::default();
+        cfg.n = 6;
+        cfg.galaxy_count = 6; // 3 pairs -> 6 galaxies
+        cfg.enable_galactic_atom_simulation = false;
+        let sim = Simulation::new(&cfg);
+        // galaxy_start_indices should match configured galaxy_count and cache_galaxies should have created that many snapshots
+        assert_eq!(sim.galaxy_start_indices.len(), cfg.galaxy_count);
+        assert_eq!(sim.galaxies.len(), cfg.galaxy_count);
+        let counted: usize = sim.galaxies.iter().map(|g| g.bodies.len()).sum();
+        assert_eq!(counted, sim.bodies.len());
+    }
+
+    #[test]
+    fn atom_mode_sets_single_galaxy_start_index() {
+        let mut cfg = InformationsConfig::default();
+        cfg.enable_galactic_atom_simulation = true;
+        cfg.element_atomic_count = 12;
+        let sim = Simulation::new(&cfg);
+        assert_eq!(sim.galaxy_start_indices, vec![0usize]);
+        assert_eq!(sim.galaxies.len(), 1);
+    }
+
+    #[test]
     fn galactic_atom_mode_respects_selected_elements_and_body_budget() {
         let mut config = InformationsConfig::default();
         config.enable_galactic_atom_simulation = true;
@@ -1528,6 +2236,7 @@ mod tests {
     fn paired_galaxy_default_remains_unlabelled() {
         let mut config = InformationsConfig::default();
         config.n = 8;
+        config.galaxy_count = 2;
         config.enable_elemental_galaxy_pair_mode = false;
 
         let simulation = Simulation::new(&config);

@@ -4,8 +4,10 @@ Diese Datei listet die wichtigsten konfigurierbaren Eigenschaften und Parameter 
 Das Programm lädt beim Start und bei Dateiaenderung automatisch den ersten gefundenen Konfigurationsblock aus informations.md.
 Ungültige Werte werden ignoriert; für sie tritt der jeweilige Code-Default in Kraft.
 Zusätzliche Ausführungsmodi können über Umgebungsvariablen aktiviert werden:
-#   RUN_CONFIG_EVALUATION=1  -> kurzes disk-equilibrium-Validierungsprofil ausführen und beenden.
-#   RUN_CONFIG_SWEEP=1       -> Toomre-Q-Sweep ausführen und beenden.
+
+# RUN_CONFIG_EVALUATION=1 -> kurzes disk-equilibrium-Validierungsprofil ausführen und beenden.
+
+# RUN_CONFIG_SWEEP=1 -> Toomre-Q-Sweep ausführen und beenden.
 
 ```config
 # === SIMULATION BASICS ===
@@ -15,10 +17,11 @@ Zusätzliche Ausführungsmodi können über Umgebungsvariablen aktiviert werden:
 #   a = G*m*r / (r² + epsilon²)^(3/2)
 # n: Anzahl der Disk-Partikel pro Galaxie (ohne Zentralmasse)
 
-dt: 2000.0
-theta: 0.1
+dt: 10.0
+theta: 1.0
 epsilon: 1.9
-n: 10000
+n: 2000
+
 
 # === GALAXY STRUCTURE ===
 # inner_radius: Radius der zentralen Masse / des Bulge
@@ -34,10 +37,10 @@ n: 10000
 #   Renderer segmenttypische Galaxienfarben, damit SMBH, Bulge, Scheibe, Gas und
 #   Satelliten als typische astronomische Regionen unterscheidbar bleiben.
 
-inner_radius: 01.1
-outer_radius: 500.0
-central_mass: 0.000001
-particle_mass_range: 0.0000000000001, 0.00000000005
+inner_radius: 2.0
+outer_radius: 100000.0
+central_mass: 100000000.10
+particle_mass_range: 10.000000000066, 250.0000000001
 
 # === SPAWN ZONE CONFIGURATION ===
 # outer_ring_spawn_zone_inner_ratio: Innerer Radius der Spawn-Zone (als Verhältnis zu outer_radius)
@@ -53,7 +56,7 @@ accretion_spawn_rate: 0.1
 # restore_strength: Stärke der vertikalen Rückstellungskraft
 
 inflow_strength: 0.00000000000005
-restore_strength: 0.000000000052
+restore_strength: 0.0000000000000052
 
 # === GAS DYNAMICS ===
 # gas_enabled: Activate lightweight SPH-inspired gas particle dynamics
@@ -105,15 +108,46 @@ gas_temperature_color_scale: 0.9
 
 # === GALAXY INTERACTION ===
 # galaxy_separation_factor: Abstand zwischen Galaxien (multipliziert mit outer_radius)
-# galaxy_count: Gesamtzahl der initial erzeugten Galaxien (paarweise angeordnet, auf gerade Zahl abgerundet)
+# galaxy_count: Gesamtzahl der initial erzeugten Galaxien (paarweise angeordnet, auf gerade Zahl abgerundet).
+#   Der Initialisierer erzeugt galaxy_count Galaxien als Paare (pair_count = floor(galaxy_count / 2)).
+#   Paare werden in einem 3D-Volumen verteilt; die Volumengröße skaliert mit
+#   galaxy_volume_scatter_factor * outer_radius * cbrt(pair_count). Für jedes Paar wird ein
+#   Paar-Mittelpunkt zufällig im Volumen gewählt, die beiden Galaxien werden entlang einer
+#   zufälligen Richtung um den Mittelpunkt mit einem Abstand von galaxy_separation_factor * outer_radius
+#   positioniert. Für jede Galaxie wird anschließend eine initiale Bulk-Geschwindigkeit berechnet,
+#   die von den Massen der beiden Partner und dem gewählten Interaktionstyp (prob_merge / prob_repeated / prob_flyby)
+#   abhängt — so entsteht eine massenkonsistente initiale Positionierung und Vektorisierung.
 # galaxy_volume_scatter_factor: Skaliert das Volumen, in dem alle Galaxienpaare chaotisch verteilt werden
+# galaxy_mass_weighted_separation: Wenn true, skaliert der Paarabstand mit der Gesamtmasse des Paares
+# galaxy_separation_mass_exponent: Exponent zur Massen-Skalierung des Abstands (z.B. 0.333)
+# galaxy_cluster_enabled: Gruppiert Paare in mehrere Cluster (automatisch für 50+ Galaxien aktiviert)
+# galaxy_cluster_count: Anzahl der Cluster (wenn clustering aktiviert)
+# galaxy_cluster_radius_factor: Skaliert das interne Dispersionsvolumen innerhalb eines Clusters
+# galaxy_cluster_motion_factor: Stärke der Clusterweiten Bewegung, die auf alle Paare im Cluster angewendet wird
+# galaxy_property_variance_factor: Skaliert, wie stark sich individuelle Galaxien-Eigenschaften mit zunehmender Anzahl unterscheiden
+# galaxy_binary_circular_fraction: Anteil der Paare, die als annähernd kreisförmige Binärsysteme initialisiert werden
+# galaxy_log_centers_on_init: Wenn true, werden die generierten Cluster- und Paarzentren beim Start geloggt
 # prob_merge: Wahrscheinlichkeit für verschmelzungsnahe Begegnungen
 # prob_repeated: Wahrscheinlichkeit für periodisch wiederkehrende Begegnungen
 # prob_flyby: Wahrscheinlichkeit für intensive Flybys
 
-galaxy_separation_factor: 8.0
-galaxy_count: 2
-galaxy_volume_scatter_factor: 02.0
+galaxy_separation_factor: 50.0
+galaxy_count: 60
+galaxy_volume_scatter_factor: 4.0
+galaxy_mass_weighted_separation: true
+galaxy_separation_mass_exponent: 0.333
+galaxy_cluster_enabled: true
+galaxy_cluster_count: 4
+galaxy_cluster_radius_factor: 0.25
+galaxy_cluster_motion_factor: 0.02
+galaxy_property_variance_factor: 10.0
+galaxy_binary_circular_fraction: 0.15
+galaxy_log_centers_on_init: true
+# total_body_budget: Gesamt-Grenze für simulierte Körper über alle Galaxien (inkl. Zentralmassen).
+#   Wenn > 0, wird die Anzahl der Disk-Partikel "n" pro Galaxie so begrenzt, dass
+#   sum(total bodies) ≤ total_body_budget gilt (je Galaxie wird ein Slot für die Zentralmasse reserviert).
+#   Nützlich, um bei großen galaxy_count * n Laufzeit- und Speicher-Überläufe zu verhindern.
+total_body_budget: 4000000
 prob_merge: 0.35
 prob_repeated: 0.35
 prob_flyby: 0.30
@@ -130,18 +164,6 @@ flyby_speed_factor: 0.90
 # === INTERACTION ANGLES ===
 # merge_angle: Annäherungswinkel für Merge-Szenarien
 # repeated_angle: Annäherungswinkel für wiederkehrende Begegnungen
-# flyby_angle: Annäherungswinkel für Flybys
-
-merge_angle: 0.05
-repeated_angle: 0.25
-flyby_angle: 0.35
-
-# === COMPUTATION INTERVALS ===
-# collision_interval: Wie oft pro Frame Kollisionen berechnet werden (höher = weniger oft)
-# attract_interval: Wie oft pro Frame Gravitationskräfte berechnet werden (höher = weniger oft)
-
-collision_interval: 1
-attract_interval: 1
 
 # === PERFORMANCE TUNING ===
 # performance_dynamic_interval_scaling: Aktiviert eine automatische Anpassung der
@@ -172,9 +194,9 @@ attract_interval: 1
 #   bei hohen Körperzahlen zu reduzieren.
 
 performance_dynamic_interval_scaling: true
-performance_body_count_threshold: 200000
+performance_body_count_threshold: 400000
 performance_max_interval_scale: 2
-performance_render_body_limit: 200000
+performance_render_body_limit: 400000
 performance_render_sample_ratio: 1.0
 performance_high_count_mode: false
 performance_disable_adaptive_updates_in_high_count: false
@@ -189,7 +211,7 @@ performance_octree_reserve_factor: 4.0
 orbital_speed_multiplier: 0.025
 spawn_angular_speed_base: 0.3
 spawn_angular_speed_range: 0.5
-spin_speed_multiplier: 18.0
+spin_speed_multiplier: 10.0
 
 # === BODY DEFORMATION ===
 # equatorial_growth_factor: Wie viel der Äquator-Radius bei Rotation wächst
@@ -205,7 +227,7 @@ radius_scale: 0.5
 # spacetime_dilation_factor: Stärke der Gravitationswellenstrahlung für spiralisierende Annäherung der Zentren
 
 depth_scale_factor: 0.002
-spacetime_dilation_factor: 0.50
+spacetime_dilation_factor: 0.5
 
 # === DISK EQUILIBRIUM MODE ===
 # enable_disk_equilibrium_mode: Aktiviert einen stabilitätsorientierten Scheibenmodus mit sech²-Vertikalprofil und driftkorrigierten Umlaufgeschwindigkeiten.
@@ -269,17 +291,17 @@ disk_equilibrium_theta: 0.60
 enable_galactic_atom_simulation: false
 enable_elemental_galaxy_pair_mode: true
 enable_elemental_simulation: true
-element_atomic_numbers: 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118
-element_pair_atomic_numbers:
-element_pair_core_atomic_numbers:
+element_atomic_numbers: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118
+element_pair_atomic_numbers: 1, 5, 118
+element_pair_core_atomic_numbers: 1, 5, 118
 enable_chemistry_compass_coloring: true
 enable_elemental_binding_response: true
 elemental_binding_response_strength: 0.35
-element_atomic_count: 100000
+element_atomic_count: 400000
 # element_max_atomic_number: 118
 #   Fallbackwert für den Fall, dass element_atomic_numbers leer bleibt.
 element_universe_scatter_factor: 1.8
-element_center_mass_unit: 01.0
+element_center_mass_unit: 1.0
 element_orbital_mass_unit: 1.0
 element_radius_scale: 5.0
 element_prime_alpha: 0.09
@@ -287,12 +309,12 @@ element_prime_beta: 0.06
 element_light_energy: 2.0
 enable_elemental_gravitation_tuning: true
 enable_elemental_mass_dimension_visualization: false
-element_initial_sorting_mode: 0
-element_initial_grouping_mode: 0
-element_group_spacing: 0.65
-element_group_internal_velocity_scale: 01.0
+element_initial_sorting_mode: 1
+element_initial_grouping_mode: 1
+element_group_spacing: 0.05
+element_group_internal_velocity_scale: 1.0
 element_sample_orbit_radius_scale: 1.0
-element_sample_orbit_speed_factor: 01.0
+element_sample_orbit_speed_factor: 1.0
 
 # === SCIENTIFIC ELEMENT GRAVITY ===
 # enable_scientific_element_gravity: Wenn true, wird die Gravitationsanalogie jedes
@@ -305,7 +327,7 @@ element_sample_orbit_speed_factor: 01.0
 enable_scientific_element_gravity: true
 element_gravity_mass_weight: 1.0
 element_gravity_electronegativity_weight: 0.4
-element_gravity_radius_weight: 10.0
+element_gravity_radius_weight: 0.3
 element_gravity_reactivity_weight: 0.2
 
 # === MOLECULAR BONDING ===
@@ -317,9 +339,9 @@ element_gravity_reactivity_weight: 0.2
 # molecule_max_bodies: Maximale Anzahl an Koerpern in einem dynamischen Molekuel.
 # molecule_identify_compounds: Wenn true, werden bekannte natuerliche Verbindungen
 #   (H2O, NaCl, CO2, CH4, ...) anhand der Stoechiometrie erkannt und benannt.
-enable_molecular_bonding: true
-molecule_bond_strength_factor: 1.0
-molecule_break_energy_threshold: 0.8
+enable_molecular_bonding: false
+molecule_bond_strength_factor: 5.0
+molecule_break_energy_threshold: 8.0
 molecule_max_bodies: 12
 molecule_identify_compounds: true
 
@@ -354,10 +376,36 @@ adaptive_multipole_medium: 2
 adaptive_multipole_critical: 3
 adaptive_dynamics_quiet_threshold: 0.001
 adaptive_dynamics_critical_threshold: 0.35
-eta_timestep: 1.0
-dt_min: 0.0
-dt_max: 0.0
+eta_timestep: 1000.0
+dt_min: 10.0
+dt_max: 1000.0
 max_energy_error: 0.5
+
+# === FLOW-DYNAMICS / GPDM ADDITIONS ===
+# Enable the new flow-dynamics model (migration mode). When true, the
+# Simulation will activate table/institution flows, emergence heuristics and
+# the timescale scheduler defined in the GPDM plan. Use this to validate the
+# new model behind a config toggle before removing legacy routes.
+enable_flow_dynamics_model: true
+
+# Deterministic emergence rule selection for institutions. Use 'v1' for the
+# deterministic heuristic implemented in src/emergence.rs. Future values may
+# include 'v2-ml', 'experimental', etc.
+institution_emergence_mode: v1
+
+# Flow capacity and timing overrides (can be tuned at runtime)
+flow_capacity_mass_per_dt: 1e9
+flow_capacity_energy_per_dt: 1e9
+flow_capacity_momentum_per_dt: 1e9
+flow_capacity_angular_momentum_per_dt: 1e9
+role_update_interval: 1000
+institution_recompute_interval: 500
+
+# Timescale overrides matching TimescaleTier defaults (can be tuned per run)
+timescale_smbh: 1
+timescale_star_formation: 100
+timescale_galaxy: 10000
+timescale_cluster: 1000000
 ```
 
 ## 1. Galaxie-Template / Spawn-Konfiguration
@@ -443,6 +491,12 @@ Direkte Änderungen:
 - `show_spin_axes` – Anzeigen der Spin-Achsen.
 - `show_mass_dimension_coloring` – Renderer-Färbung nach Massendimension.
 - `show_element_debug_labels` – Anzeige zusätzlicher Elementdiagnosen.
+- `enable_flow_dynamics_model` – Schaltet GPDM/Flow-Dynamics Visualisierungen und Emergenz-Regeln ein.
+- `institution_emergence_mode` – Wählt die Emergenz‑Regelfamilie (z. B. "v1").
+- `flowfield_vector_scale` – Skaliert die Länge der im FlowField gezeichneten Vektoren (World → Tip). Standard: 0.05.
+- `flowfield_max_vectors` – Maximale Anzahl gezeichneter Flow-Vektoren (sample-basiert). Standard: 1024.
+- `organigram_sample_limit` – Maximale Anzahl an Institutionen, die für die Organigram-Ansicht gesampelt werden. Standard: 200.
+- `organigram_canvas_width` / `organigram_canvas_height` – Pixelgröße des Organigram-Canvas. Standard: 360 x 360.
 
 Direkte Änderungen:
 

@@ -352,15 +352,30 @@ impl Default for InformationsConfig {
 impl InformationsConfig {
     pub fn load() -> Self {
         // Versuche, den absoluten Pfad zu bestimmen (zuerst im Arbeitsverzeichnis, dann relativ zur Binary)
+        // Erstens: relative Pfad-Auflösung (aktuelles Arbeitsverzeichnis)
         let mut possible_paths = vec![PathBuf::from("informations.md")];
-        if let Ok(exe) = env::current_exe() {
-            if let Some(parent) = exe.parent() {
-                possible_paths.push(parent.join("informations.md"));
-            }
-        }
         // Allow overriding the informations.md path from the environment for tests and alternate launches.
         if let Ok(override_path) = env::var("INFORMATIONS_MD") {
             possible_paths.insert(0, PathBuf::from(override_path));
+        }
+
+        // Wenn die Anwendung als einzelnes Binary ausgeführt wird (z. B. target/release),
+        // dann suche nicht nur im Exe-Ordner, sondern steige einige Ebenen nach oben,
+        // damit eine informations.md im Projektwurzelverzeichnis gefunden wird.
+        if let Ok(exe) = env::current_exe() {
+            if let Some(mut dir) = exe.parent() {
+                // search up to 5 levels above the exe directory
+                let mut levels = 0;
+                while levels < 5 {
+                    possible_paths.push(dir.join("informations.md"));
+                    if let Some(p) = dir.parent() {
+                        dir = p;
+                    } else {
+                        break;
+                    }
+                    levels += 1;
+                }
+            }
         }
 
         let mut file_text = String::new();

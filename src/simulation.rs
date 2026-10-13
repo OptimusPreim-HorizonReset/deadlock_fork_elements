@@ -15,7 +15,6 @@ use crate::galaxy::GalaxyState;
 use crate::timescales::TimescaleScheduler;
 use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 use ultraviolet::{Vec2, Vec3};
 
 pub struct Simulation {
@@ -2060,8 +2059,7 @@ impl Simulation {
             return;
         }
 
-        use crate::astro::{StarStage, StarState};
-        use crate::body::BodySegment;
+        use crate::astro::StarStage;
         let mut sn_events: Vec<usize> = Vec::new();
         let dt = self.dt.max(0.0);
         for idx in 0..self.bodies.len() {
@@ -2635,6 +2633,12 @@ mod tests {
         config.n = 8;
         config.enable_flow_dynamics_model = true;
         let mut simulation = Simulation::new(&config);
+
+        // Defensive test hygiene: clear any global emergent TABLES state that may
+        // be mutated by other tests running in parallel and ensure roles start
+        // from the deterministic default before invoking the update path.
+        crate::tables::TABLES.lock().clear();
+        simulation.bodies[2].roles = crate::roles::RoleWeights::default();
 
         simulation.bodies[2].gas_density = 0.0;
         simulation.bodies[2].accretion_ejection_bias = 0.0;

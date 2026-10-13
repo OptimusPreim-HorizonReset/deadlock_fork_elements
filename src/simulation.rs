@@ -23,6 +23,9 @@ pub struct Simulation {
     pub frame: usize,
     pub bodies: Vec<Body>,
     pub octree: Octree,
+    /// Last frame for which the octree was built; allows reusing the octree between
+    /// collide() and attract() calls within the same frame to avoid duplicate builds.
+    pub octree_built_frame: usize,
     /// Cached per-galaxy snapshots (GalaxyState) for emergence and institution workflows
     pub galaxies: Vec<GalaxyState>,
     /// Per-galaxy start indices inside the bodies Vec for slicing into GalaxyState snapshots.
@@ -437,6 +440,7 @@ impl Simulation {
             molecular_bonds: Vec::new(),
             timescale_scheduler: TimescaleScheduler::new(),
             galaxies: Vec::new(),
+            octree_built_frame: usize::MAX,
             galaxy_start_indices,
         };
 
@@ -740,6 +744,7 @@ impl Simulation {
             molecular_bonds: Vec::new(),
             timescale_scheduler: TimescaleScheduler::new(),
             galaxies: Vec::new(),
+            octree_built_frame: usize::MAX,
             galaxy_start_indices: vec![0],
         };
 
@@ -1304,6 +1309,11 @@ impl Simulation {
             // deterministically detect dense gas cells and spawn proto-stars conservatively
             self.process_gas_collapse_and_spawn();
         }
+
+        // Enforce global body budget: if runtime spawns pushed the body count beyond
+        // configured `total_body_budget`, prune the smallest bodies to keep the
+        // simulation tractable and avoid catastrophic slowdowns.
+        self.enforce_total_body_budget();
         // Periodically compute emergence heuristics to instantiate institutions (M3+ behavior)
         if self
             .timescale_scheduler
@@ -1355,24 +1365,58 @@ impl Simulation {
 
     pub fn attract(&mut self) {
         let oct = Oct::new_containing(&self.bodies);
-        // Allow tuning the octree reserve size via configuration to balance memory vs realloc
-        let mut reserve_factor = self.config.performance_octree_reserve_factor.max(1.0);
-        // In high-count performance mode, reduce octree reserve to speed up allocation and insertion.
-        if self.bodies.len() > self.config.performance_body_count_threshold && self.config.performance_high_count_mode {
-            reserve_factor = 1.0; // conservative reserve to avoid excessive allocation
-        }
-        let reserve_nodes = ((self.bodies.len() as f32) * reserve_factor).ceil() as usize;
-        // parents typically fewer than leaf nodes; reserve a fraction of the factor
-        let reserve_parents = ((self.bodies.len() as f32) * (reserve_factor * 0.25)).ceil() as usize;
-        self.octree.reserve(reserve_nodes, reserve_parents);
-        self.octree.clear(oct);
+        // If an octree was already built earlier this frame (eg. by collide()), try to reuse it.
+        if self.octree_built_frame != self.frame {
+            // Allow tuning the octree reserve size via configuration to balance memory vs realloc
+            let mut reserve_factor = self.config.performance_octree_reserve_factor.max(1.0);
+            // In high-count performance mode, reduce octree reserve to speed up allocation and insertion.
+            if self.bodies.len() > self.config.performance_body_count_threshold && self.config.performance_high_count_mode {
+                reserve_factor = 1.0; // conservative reserve to avoid excessive allocation
+            }
+            let reserve_nodes = ((self.bodies.len() as f32) * reserve_factor).ceil() as usize;
+            // parents typically fewer than leaf nodes; reserve a fraction of the factor
+            let reserve_parents = ((self.bodies.len() as f32) * (reserve_factor * 0.25)).ceil() as usize;
+            self.octree.reserve(reserve_nodes, reserve_parents);
+            self.octree.clear(oct);
 
-        for body in &self.bodies {
-            let effective_mass = body.mass * Self::elemental_gravity_scale(body, &self.config);
-            self.octree.insert(body.pos, effective_mass);
-        }
+            for body in &self.bodies {
+                let effective_mass = body.mass * Self::elemental_gravity_scale(body, &self.config);
+                self.octree.insert(body.pos, effective_mass);
+            }
 
-        self.octree.propagate();
+            self.octree.propagate();
+            self.octree_built_frame = self.frame;
+        } else {
+            // Octree was built earlier in this frame; check whether the root oct differs enough
+            // to require a rebuild. If it does, rebuild; otherwise reuse the existing tree.
+            if let Some(root) = self.octree.nodes.get(0) {
+                let center_diff = (root.oct.center - oct.center).mag();
+                let size_diff = (root.oct.size - oct.size).abs();
+                if center_diff > 1e-3 || size_diff > 1e-3 {
+                    // rebuild to avoid invalid queries
+                    self.octree.clear(oct);
+                    for body in &self.bodies {
+                        let effective_mass = body.mass * Self::elemental_gravity_scale(body, &self.config);
+                        self.octree.insert(body.pos, effective_mass);
+                    }
+                    self.octree.propagate();
+                    self.octree_built_frame = self.frame;
+                }
+            } else {
+                // empty octree: build it
+                let reserve_factor = self.config.performance_octree_reserve_factor.max(1.0);
+                let reserve_nodes = ((self.bodies.len() as f32) * reserve_factor).ceil() as usize;
+                let reserve_parents = ((self.bodies.len() as f32) * (reserve_factor * 0.25)).ceil() as usize;
+                self.octree.reserve(reserve_nodes, reserve_parents);
+                self.octree.clear(oct);
+                for body in &self.bodies {
+                    let effective_mass = body.mass * Self::elemental_gravity_scale(body, &self.config);
+                    self.octree.insert(body.pos, effective_mass);
+                }
+                self.octree.propagate();
+                self.octree_built_frame = self.frame;
+            }
+        }
 
         let softening = self.config.epsilon * self.config.softening_scale_factor;
         let softening_sq = softening * softening;
@@ -1658,75 +1702,48 @@ impl Simulation {
             return;
         }
 
-        // Build a sparse map of occupied grid cells to avoid large empty allocations
-        let cell_index = |pos: Vec3| {
-            let ix = ((pos.x - min_x) / cell_size).floor() as isize;
-            let iy = ((pos.y - min_y) / cell_size).floor() as isize;
-            let iz = ((pos.z - min_z) / cell_size).floor() as isize;
-            ((ix as usize) * size_y + iy as usize) * size_z + iz as usize
-        };
+        // Build a temporary octree for neighbor queries. The octree is then reused by
+        // attract() when possible to avoid rebuilding twice in the same frame.
+        let oct = Oct::new_containing(&self.bodies);
+        let mut reserve_factor = self.config.performance_octree_reserve_factor.max(1.0);
+        if self.bodies.len() > self.config.performance_body_count_threshold && self.config.performance_high_count_mode {
+            reserve_factor = 1.0;
+        }
+        let reserve_nodes = ((self.bodies.len() as f32) * reserve_factor).ceil() as usize;
+        let reserve_parents = ((self.bodies.len() as f32) * (reserve_factor * 0.25)).ceil() as usize;
+        self.octree.reserve(reserve_nodes, reserve_parents);
+        self.octree.clear(oct);
 
-        let mut cell_map: HashMap<usize, Vec<usize>> = HashMap::new();
-        // Reserve approximate capacity for sparse occupied cells to reduce rehashing
-        let expected_cells = (self.bodies.len()).min(total_cells);
-        cell_map.reserve(expected_cells);
-        for (index, body) in self.bodies.iter().enumerate() {
-            let idx = cell_index(body.pos);
-            if idx < total_cells {
-                cell_map.entry(idx).or_default().push(index);
-            }
+        for (idx, body) in self.bodies.iter().enumerate() {
+            let effective_mass = body.mass * Self::elemental_gravity_scale(body, &self.config);
+            self.octree.insert_with_index(body.pos, effective_mass, idx);
         }
 
-        if cell_map.is_empty() {
-            return;
-        }
+        self.octree.propagate();
+        self.octree_built_frame = self.frame;
 
-        let occupied_cells: Vec<usize> = cell_map.keys().copied().collect();
+        // For each body, query nearby leaf bodies in the octree and resolve collisions.
+        let max_radius = self
+            .bodies
+            .iter()
+            .map(|body| body.effective_radius())
+            .fold(0.0_f32, f32::max)
+            .max(1.0);
 
-        // Iterate candidate neighbor cell pairs and resolve collisions directly without
-        // allocating a large intermediate list of index pairs. This reduces allocations
-        // and the pressure on the allocator for large body counts.
-        for &cell_idx in &occupied_cells {
-            let size_y_sz = size_y;
-            let size_z_sz = size_z;
-            let size_x_sz = size_x;
-
-            let ix = cell_idx / (size_y_sz * size_z_sz);
-            let rem = cell_idx % (size_y_sz * size_z_sz);
-            let iy = rem / size_z_sz;
-            let iz = rem % size_z_sz;
-
-            if let Some(indices) = cell_map.get(&cell_idx) {
-                for dx in 0..=1 {
-                    for dy in 0..=1 {
-                        for dz in 0..=1 {
-                            let nx = ix + dx;
-                            let ny = iy + dy;
-                            let nz = iz + dz;
-                            if nx >= size_x_sz || ny >= size_y_sz || nz >= size_z_sz {
-                                continue;
-                            }
-                            let neighbor_idx = (nx * size_y_sz + ny) * size_z_sz + nz;
-                            if let Some(neighbor_indices) = cell_map.get(&neighbor_idx) {
-                                for &i in indices {
-                                    for &j in neighbor_indices {
-                                        if neighbor_idx == cell_idx && i >= j {
-                                            continue;
-                                        }
-                                        if i == j {
-                                            continue;
-                                        }
-                                        // Bounds-check indices then resolve directly to avoid building
-                                        // intermediate vectors of pairs.
-                                        if i < self.bodies.len() && j < self.bodies.len() {
-                                            self.resolve(i, j, &mut center_merge_pair);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+        let mut neighbors: Vec<usize> = Vec::with_capacity(64);
+        for i in 0..self.bodies.len() {
+            let r_i = self.bodies[i].effective_radius();
+            let r_search = r_i + max_radius;
+            self.octree.query_radius(self.bodies[i].pos, r_search, &mut neighbors);
+            for &j in &neighbors {
+                if j <= i { continue; }
+                // Inline quick-reject using squared distance and per-body effective radii to
+                // avoid the overhead of calling resolve() for distant candidates.
+                let r_j = self.bodies[j].effective_radius();
+                let r = r_i + r_j;
+                let d_sq = (self.bodies[j].pos - self.bodies[i].pos).mag_sq();
+                if d_sq > r * r { continue; }
+                self.resolve(i, j, &mut center_merge_pair);
             }
         }
 
@@ -2320,6 +2337,47 @@ impl Simulation {
         eprintln!(
             "🔗 Center merge: mass={} pos={:?} axis={:?} inflow-plane-normal={:?}",
             total_mass, merged_pos, axis, self.equatorial_plane_normal
+        );
+    }
+
+    /// Enforce global body budget by pruning the smallest bodies when the runtime
+    /// body count exceeds the configured `total_body_budget`. This prevents
+    /// runaway spawns from killing performance and gives predictable worst-case
+    /// resource usage.
+    fn enforce_total_body_budget(&mut self) {
+        let budget = self.config.total_body_budget;
+        if self.bodies.len() <= budget {
+            return;
+        }
+        let remove_count = self.bodies.len().saturating_sub(budget);
+
+        // Sort indices by increasing mass so we remove the smallest bodies first
+        let mut idxs: Vec<usize> = (0..self.bodies.len()).collect();
+        idxs.sort_by(|&a, &b| {
+            self.bodies[a]
+                .mass
+                .partial_cmp(&self.bodies[b].mass)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        // Take the lowest-mass indices and remove them in descending order to avoid
+        // invalidating earlier indices during removal.
+        let mut to_remove: Vec<usize> = idxs.into_iter().take(remove_count).collect();
+        to_remove.sort_unstable_by(|a, b| b.cmp(a));
+
+        for idx in to_remove {
+            // Prefer not to remove special center indices; if they appear, skip them and
+            // remove the next candidate instead.
+            if idx == self.center1_idx || idx == self.center2_idx {
+                continue;
+            }
+            self.remove_body_at(idx);
+        }
+
+        eprintln!(
+            "⚠ Pruned bodies to budget: removed {} bodies, new_count={}",
+            remove_count,
+            self.bodies.len()
         );
     }
 }

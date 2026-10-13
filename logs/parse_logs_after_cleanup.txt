@@ -1,0 +1,1 @@
+Logs organisiert: logs/originals/20260927-071120 und logs/parsed. Siehe logs/SUMMARY.md.

@@ -1,0 +1,18 @@
+   Compiling barnes-hut v0.1.0 (F:\Games\deadlock_fork_elements)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.07s
+     Running `target\debug\barnes-hut.exe --headless-test`
+Γ£ô Config geladen: informations.md
+Headless particle movement test (2 galaxies, 20 particles each): 42 bodies
+≡ƒîî Spiral: dist=27999.92, grav=0.00, dissipation=0.00
+ step  1: total displacement = 9.650508
+≡ƒîî Spiral: dist=27999.75, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=27999.59, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=27999.43, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=27999.26, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=27999.10, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=27998.94, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=27998.77, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=27998.61, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=27998.45, grav=0.00, dissipation=0.00
+ step 20: total displacement = 193.046082
+Particle movement verification: 42 / 42 moved

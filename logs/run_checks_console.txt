@@ -1,0 +1,436 @@
+Running checks in F:\Games\deadlock_fork_elements
+1) cargo test (running all tests)
+   Compiling barnes-hut v0.1.0 (F:\Games\deadlock_fork_elements)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.10s
+     Running unittests src\main.rs (target\debug\deps\barnes_hut-358cb1eebfeae459.exe)
+
+running 72 tests
+test accounts::tests::conservative_transfer_preserves_totals_when_within_capacity ... ok
+test accounts::tests::scalar_transfer_is_clamped_by_capacity_and_availability ... ok
+test accounts::tests::vector_momentum_transfer_respects_direction_and_capacity ... ok
+test config::tests::atomic_number_lists_accept_empty_and_valid_lists ... ok
+test config::tests::explicit_mode_setting_takes_precedence_over_legacy_alias ... ok
+test config::tests::load_parses_flowfield_and_organigram_keys_from_informations_md ... ok
+test contact_parliament::tests::negotiation_preserves_total_angular_momentum ... ok
+test elements::tests::catalog_contains_all_118_ordered_elements ... ok
+test elements::tests::chemistry_families_match_documented_extremes ... ok
+test elements::tests::element_colors_are_finite_and_bounded ... ok
+test elements::tests::missing_electronegativities_are_explicitly_estimated ... ok
+test elements::tests::reactivity_extremes_and_binding_classes_are_bounded ... ok
+test elements::tests::scientific_gravity_is_hydrogen_normalized_and_orders_heavy_elements ... ok
+test emergence::tests::emergence_v1_creates_table_when_threshold_exceeded ... ok
+test emergence::tests::emergence_v1_no_table_when_below_threshold ... ok
+test emergence::tests::emergence_v1_registers_table_in_registry_when_enabled ... ok
+test galaxy::tests::galaxy_aggregates_mass_and_momentum ... ok
+test galaxy_tree::tests::galaxy_tree_inserts_and_accumulates_mass ... ok
+test gas::tests::alpha_layers_are_bounded_and_outer_to_inner_ordered ... ok
+test gas::tests::invalid_gas_visual_inputs_are_sanitized ... ok
+test history::tests::history_records_and_stability ... ok
+test molecules::tests::compound_identification_is_order_independent ... ok
+test molecules::tests::compound_library_includes_documented_organic_and_mineral_examples ... ok
+test molecules::tests::unknown_valid_compositions_keep_a_deterministic_formula ... ok
+test render_mode::tests::render_mode_variants_match_expected_order ... ok
+test renderer::tests::renderer_statics_match_config_defaults ... ok
+test roles::tests::default_is_reservoir ... ok
+test roles::tests::normalize_works ... ok
+test scientific_validation::performance_body_memory_stays_within_repository_budget ... ok
+test scientific_validation::performance_four_x_particle_scaling_stays_below_twelve_x_runtime ... ignored, hardware scaling timing is opt-in
+test scientific_validation::performance_octree_node_growth_remains_linear ... ok
+test scientific_validation::performance_optional_4096_body_timing_stays_within_calibrated_budget ... ignored, hardware timing requires a calibrated target-machine budget
+test scientific_validation::physics_angular_momentum_drift_stays_below_reference_tolerance ... ok
+test scientific_validation::physics_center_merge_conserves_mass_and_linear_momentum ... ok
+test scientific_validation::physics_center_of_mass_remains_stationary ... ok
+test scientific_validation::physics_default_softened_binary_remains_bounded ... ok
+test scientific_validation::physics_disk_equilibrium_uses_runtime_plummer_law ... ok
+test scientific_validation::physics_elemental_mass_remapping_recomputes_circular_velocities ... ok
+test scientific_validation::physics_inclined_generation_uses_projected_orbital_radius ... ok
+test scientific_validation::physics_linear_momentum_is_conserved_in_an_isolated_binary ... ok
+test scientific_validation::physics_production_steps_conserve_mass_without_collisions ... ok
+test scientific_validation::physics_symplectic_energy_drift_remains_bounded ... ok
+test scientific_validation::property_barnes_hut_rms_force_error_is_below_five_percent ... ok
+test scientific_validation::property_bond_forces_are_restricted_to_bonded_bodies ... ok
+test scientific_validation::property_bounded_inputs_never_produce_nan_or_infinity ... ok
+test scientific_validation::property_element_gravity_does_not_create_self_pressure ... ok
+test scientific_validation::property_exact_tree_traversal_matches_direct_summation ... ok
+test scientific_validation::property_gravity_is_rotation_covariant ... ok
+test scientific_validation::property_gravity_is_translation_invariant ... ok
+test scientific_validation::property_mixed_precision_force_orders_stay_below_eight_percent ... ok
+test scientific_validation::property_pair_forces_obey_newtons_third_law ... ok
+test scientific_validation::property_simulation_attract_force_error_stays_below_eight_percent ... ok
+test scientific_validation::regression_equal_mass_binary_remains_on_a_bounded_circular_orbit ... ok
+test scientific_validation::regression_softened_force_matches_independent_snapshot ... ok
+test scientific_validation::shader_cpu_gas_billboard_alpha_layers_are_bounded_and_ordered ... ok
+test scientific_validation::shader_optional_glsl_artifact_parses_and_validates_with_naga ... ok
+test scientific_validation::unit_body_integration_remains_semi_implicit_euler ... ok
+test scientific_validation::unit_octree_mass_and_center_of_mass_are_exact ... ok
+test scientific_validation::unit_plummer_softened_gravity_matches_analytic_reference ... ok
+test scientific_validation::unit_unsoftened_gravity_follows_inverse_square_law ... ok
+test scientific_validation::unit_zero_distance_self_force_is_finite_and_zero ... ok
+test scientific_validation::validation_accounts_conservative_transfer_preserves_totals ... ok
+test simulation::tests::galactic_atom_mode_respects_selected_elements_and_body_budget ... ok
+test simulation::tests::manual_element_spawn_preserves_selection_and_gets_a_stable_id ... ok
+test simulation::tests::molecular_spring_force_conserves_pair_momentum_and_breaks_at_threshold ... ok
+test simulation::tests::molecule_composition_resolves_known_compounds ... ok
+test simulation::tests::paired_galaxy_default_remains_unlabelled ... ok
+test simulation::tests::unlike_element_collision_forms_a_persistent_bond ... ok
+test tables::tests::delegate_reflects_accounts ... ok
+test tables::tests::transfer_between_tables_uses_capacity ... ok
+test timescales::tests::default_intervals_are_reasonable ... ok
+test timescales::tests::scheduler_ticks_as_expected ... ok
+
+test result: ok. 70 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+2) cargo clippy (treat warnings as errors)
+    Checking barnes-hut v0.1.0 (F:\Games\deadlock_fork_elements)
+error: function `emergence_v1` is never used
+  --> src\emergence.rs:13:8
+   |
+13 | pub fn emergence_v1(
+   |        ^^^^^^^^^^^^
+   |
+   = note: `-D dead-code` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[expect(dead_code)]` or `#[allow(dead_code)]`
+
+error: method `identified_compound` is never used
+   --> src\simulation.rs:566:12
+    |
+ 38 | impl Simulation {
+    | --------------- method in this implementation
+...
+566 |     pub fn identified_compound(
+    |            ^^^^^^^^^^^^^^^^^^^
+
+error: used consecutive `str::replace` call
+   --> src\config.rs:370:18
+    |
+370 |                   .replace(':', ".")
+    |  __________________^
+371 | |                 .replace(';', ".")
+    | |__________________________________^ help: replace with: `replace([':', ';'], ".")`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#collapsible_str_replace
+    = note: `-D clippy::collapsible-str-replace` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::collapsible_str_replace)]`
+
+error: float has excessive precision
+  --> src\elements.rs:88:43
+   |
+88 |     element_record!(21, "Sc", "Scandium", 44.955909, 4, 3, Some(1.36)),
+   |                                           ^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+   = note: `-D clippy::excessive-precision` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::excessive_precision)]`
+help: consider changing the type or truncating it to
+   |
+88 -     element_record!(21, "Sc", "Scandium", 44.955909, 4, 3, Some(1.36)),
+88 +     element_record!(21, "Sc", "Scandium", 44.955_91, 4, 3, Some(1.36)),
+   |
+
+error: float has excessive precision
+   --> src\elements.rs:100:42
+    |
+100 |     element_record!(33, "As", "Arsenic", 74.921596, 4, 15, Some(2.18)),
+    |                                          ^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+100 -     element_record!(33, "As", "Arsenic", 74.921596, 4, 15, Some(2.18)),
+100 +     element_record!(33, "As", "Arsenic", 74.921_59, 4, 15, Some(2.18)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:108:42
+    |
+108 |     element_record!(41, "Nb", "Niobium", 92.906372, 5, 5, Some(1.6)),
+    |                                          ^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+108 -     element_record!(41, "Nb", "Niobium", 92.906372, 5, 5, Some(1.6)),
+108 +     element_record!(41, "Nb", "Niobium", 92.906_37, 5, 5, Some(1.6)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:112:42
+    |
+112 |     element_record!(45, "Rh", "Rhodium", 102.905502, 5, 9, Some(2.28)),
+    |                                          ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+112 -     element_record!(45, "Rh", "Rhodium", 102.905502, 5, 9, Some(2.28)),
+112 +     element_record!(45, "Rh", "Rhodium", 102.905_5, 5, 9, Some(2.28)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:120:40
+    |
+120 |     element_record!(53, "I", "Iodine", 126.904473, 5, 17, Some(2.66)),
+    |                                        ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+120 -     element_record!(53, "I", "Iodine", 126.904473, 5, 17, Some(2.66)),
+120 +     element_record!(53, "I", "Iodine", 126.904_47, 5, 17, Some(2.66)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:122:41
+    |
+122 |     element_record!(55, "Cs", "Cesium", 132.905452, 6, 1, Some(0.79)),
+    |                                         ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+122 -     element_record!(55, "Cs", "Cesium", 132.905452, 6, 1, Some(0.79)),
+122 +     element_record!(55, "Cs", "Cesium", 132.905_46, 6, 1, Some(0.79)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:124:44
+    |
+124 |     element_record!(57, "La", "Lanthanum", 138.905477, 6, 3, Some(1.1)),
+    |                                            ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+124 -     element_record!(57, "La", "Lanthanum", 138.905477, 6, 3, Some(1.1)),
+124 +     element_record!(57, "La", "Lanthanum", 138.905_47, 6, 3, Some(1.1)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:126:47
+    |
+126 |     element_record!(59, "Pr", "Praseodymium", 140.907662, 6, 3, Some(1.13)),
+    |                                               ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+126 -     element_record!(59, "Pr", "Praseodymium", 140.907662, 6, 3, Some(1.13)),
+126 +     element_record!(59, "Pr", "Praseodymium", 140.907_67, 6, 3, Some(1.13)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:132:42
+    |
+132 |     element_record!(65, "Tb", "Terbium", 158.925352, 6, 3, Some(1.1)),
+    |                                          ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+132 -     element_record!(65, "Tb", "Terbium", 158.925352, 6, 3, Some(1.1)),
+132 +     element_record!(65, "Tb", "Terbium", 158.925_35, 6, 3, Some(1.1)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:134:42
+    |
+134 |     element_record!(67, "Ho", "Holmium", 164.930332, 6, 3, Some(1.23)),
+    |                                          ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+134 -     element_record!(67, "Ho", "Holmium", 164.930332, 6, 3, Some(1.23)),
+134 +     element_record!(67, "Ho", "Holmium", 164.930_33, 6, 3, Some(1.23)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:136:42
+    |
+136 |     element_record!(69, "Tm", "Thulium", 168.934222, 6, 3, Some(1.25)),
+    |                                          ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+136 -     element_record!(69, "Tm", "Thulium", 168.934222, 6, 3, Some(1.25)),
+136 +     element_record!(69, "Tm", "Thulium", 168.934_22, 6, 3, Some(1.25)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:140:43
+    |
+140 |     element_record!(73, "Ta", "Tantalum", 180.947882, 6, 5, Some(1.5)),
+    |                                           ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+140 -     element_record!(73, "Ta", "Tantalum", 180.947882, 6, 5, Some(1.5)),
+140 +     element_record!(73, "Ta", "Tantalum", 180.947_88, 6, 5, Some(1.5)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:150:42
+    |
+150 |     element_record!(83, "Bi", "Bismuth", 208.980401, 6, 15, Some(2.02)),
+    |                                          ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+150 -     element_record!(83, "Bi", "Bismuth", 208.980401, 6, 15, Some(2.02)),
+150 +     element_record!(83, "Bi", "Bismuth", 208.980_41, 6, 15, Some(2.02)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:158:47
+    |
+158 |     element_record!(91, "Pa", "Protactinium", 231.035882, 7, 3, Some(1.5)),
+    |                                               ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+158 -     element_record!(91, "Pa", "Protactinium", 231.035882, 7, 3, Some(1.5)),
+158 +     element_record!(91, "Pa", "Protactinium", 231.035_89, 7, 3, Some(1.5)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:159:41
+    |
+159 |     element_record!(92, "U", "Uranium", 238.028913, 7, 3, Some(1.38)),
+    |                                         ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+159 -     element_record!(92, "U", "Uranium", 238.028913, 7, 3, Some(1.38)),
+159 +     element_record!(92, "U", "Uranium", 238.028_92, 7, 3, Some(1.38)),
+    |
+
+error: this `if` statement can be collapsed
+   --> src\elements.rs:304:5
+    |
+304 | /     if first.family == ElementFamily::NobleGas || second.family == ElementFamily::NobleGas {
+305 | |         if first.reactivity_score() < 0.15 || second.reactivity_score() < 0.15 {
+306 | |             return BindingTendency::Inert;
+307 | |         }
+308 | |     }
+    | |_____^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#collapsible_if
+    = note: `-D clippy::collapsible-if` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::collapsible_if)]`
+help: collapse nested if block
+    |
+304 ~     if (first.family == ElementFamily::NobleGas || second.family == ElementFamily::NobleGas) {
+305 ~         && (first.reactivity_score() < 0.15 || second.reactivity_score() < 0.15) {
+306 |             return BindingTendency::Inert;
+307 ~         }
+    |
+
+error: this `if` statement can be collapsed
+   --> src\renderer.rs:259:9
+    |
+259 | /         if !self.bodies.is_empty() {
+260 | |             if self.show_bodies {
+261 | |                 for body in &self.bodies {
+262 | |                     if let Some((pos, z)) = self.project_point_basis(
+...   |
+306 | |         }
+    | |_________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+259 ~         if !self.bodies.is_empty()
+260 ~             && self.show_bodies {
+261 |                 for body in &self.bodies {
+...
+304 |                 }
+305 ~             }
+    |
+
+error: name `SMBH` contains a capitalized acronym
+ --> src\timescales.rs:4:5
+  |
+4 |     SMBH,
+  |     ^^^^ help: consider making the acronym lowercase, except the initial letter: `Smbh`
+  |
+  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#upper_case_acronyms
+  = note: `-D clippy::upper-case-acronyms` implied by `-D warnings`
+  = help: to override `-D warnings` add `#[allow(clippy::upper_case_acronyms)]`
+
+error: manual implementation of `.is_multiple_of()`
+  --> src\timescales.rs:41:9
+   |
+41 |         self.frame % interval == 0
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace with: `self.frame.is_multiple_of(interval)`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#manual_is_multiple_of
+   = note: `-D clippy::manual-is-multiple-of` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::manual_is_multiple_of)]`
+
+error: could not compile `barnes-hut` (bin "barnes-hut") due to 22 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `barnes-hut` (bin "barnes-hut" test) due to 20 previous errors
+3) cargo fmt
+4) cargo build --release
+warning: function `emergence_v1` is never used
+  --> src\emergence.rs:13:8
+   |
+13 | pub fn emergence_v1(
+   |        ^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `identified_compound` is never used
+   --> src\simulation.rs:566:12
+    |
+ 38 | impl Simulation {
+    | --------------- method in this implementation
+...
+566 |     pub fn identified_compound(
+    |            ^^^^^^^^^^^^^^^^^^^
+
+warning: `barnes-hut` (bin "barnes-hut") generated 2 warnings
+    Finished `release` profile [optimized] target(s) in 0.79s
+5) headless smoke run (small)
+   Compiling barnes-hut v0.1.0 (F:\Games\deadlock_fork_elements)
+warning: function `emergence_v1` is never used
+  --> src\emergence.rs:13:8
+   |
+13 | pub fn emergence_v1(
+   |        ^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `identified_compound` is never used
+   --> src\simulation.rs:566:12
+    |
+ 38 | impl Simulation {
+    | --------------- method in this implementation
+...
+566 |     pub fn identified_compound(
+    |            ^^^^^^^^^^^^^^^^^^^
+
+warning: `barnes-hut` (bin "barnes-hut") generated 2 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.37s
+     Running `target\debug\barnes-hut.exe --headless-test`
+Γ£ô Config geladen: informations.md
+Headless particle movement test (2 galaxies, 20 particles each): 42 bodies
+≡ƒîî Spiral: dist=27999.99, grav=0.00, dissipation=0.00
+ step  1: total displacement = 8.715659
+≡ƒîî Spiral: dist=27999.96, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=27999.94, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=27999.92, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=27999.89, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=27999.87, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=27999.85, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=27999.82, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=27999.80, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=27999.78, grav=0.00, dissipation=0.00
+ step 20: total displacement = 174.301163
+Particle movement verification: 42 / 42 moved
+All checks finished. Logs: test-output.txt, clippy-output.txt, build-output.txt, headless-output.txt

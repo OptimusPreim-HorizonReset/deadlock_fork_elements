@@ -1,0 +1,1001 @@
+Running checks in F:\Games\deadlock_fork_elements
+1) cargo test (running all tests)
+   Compiling barnes-hut v0.1.0 (F:\Games\deadlock_fork_elements)
+warning: method `recompute_institutions` is never used
+   --> src\simulation.rs:164:8
+    |
+ 43 | impl Simulation {
+    | --------------- method in this implementation
+...
+164 |     fn recompute_institutions(&mut self) {
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `barnes-hut` (bin "barnes-hut" test) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.19s
+     Running unittests src\main.rs (target\debug\deps\barnes_hut-358cb1eebfeae459.exe)
+
+running 73 tests
+test accounts::tests::conservative_transfer_preserves_totals_when_within_capacity ... ok
+test accounts::tests::scalar_transfer_is_clamped_by_capacity_and_availability ... ok
+test accounts::tests::vector_momentum_transfer_respects_direction_and_capacity ... ok
+test config::tests::atomic_number_lists_accept_empty_and_valid_lists ... ok
+test config::tests::explicit_mode_setting_takes_precedence_over_legacy_alias ... ok
+test contact_parliament::tests::negotiation_preserves_total_angular_momentum ... ok
+test elements::tests::catalog_contains_all_118_ordered_elements ... ok
+test elements::tests::chemistry_families_match_documented_extremes ... ok
+test elements::tests::element_colors_are_finite_and_bounded ... ok
+test elements::tests::missing_electronegativities_are_explicitly_estimated ... ok
+test elements::tests::reactivity_extremes_and_binding_classes_are_bounded ... ok
+test elements::tests::scientific_gravity_is_hydrogen_normalized_and_orders_heavy_elements ... ok
+test emergence::tests::emergence_v1_creates_table_when_threshold_exceeded ... ok
+test emergence::tests::emergence_v1_no_table_when_below_threshold ... ok
+test emergence::tests::emergence_v1_registers_table_in_registry_when_enabled ... ok
+test galaxy::tests::galaxy_aggregates_mass_and_momentum ... ok
+test galaxy_tree::tests::galaxy_tree_inserts_and_accumulates_mass ... ok
+test gas::tests::alpha_layers_are_bounded_and_outer_to_inner_ordered ... ok
+test gas::tests::invalid_gas_visual_inputs_are_sanitized ... ok
+test history::tests::history_records_and_stability ... ok
+test id_alloc::tests::ids_increment_and_are_unique ... ok
+test molecules::tests::compound_identification_is_order_independent ... ok
+test molecules::tests::compound_library_includes_documented_organic_and_mineral_examples ... ok
+test molecules::tests::unknown_valid_compositions_keep_a_deterministic_formula ... ok
+test render_mode::tests::render_mode_variants_match_expected_order ... ok
+test roles::tests::default_is_reservoir ... ok
+test roles::tests::normalize_works ... ok
+test scientific_validation::performance_body_memory_stays_within_repository_budget ... ok
+test scientific_validation::performance_four_x_particle_scaling_stays_below_twelve_x_runtime ... ignored, hardware scaling timing is opt-in
+test scientific_validation::performance_octree_node_growth_remains_linear ... ok
+test scientific_validation::performance_optional_4096_body_timing_stays_within_calibrated_budget ... ignored, hardware timing requires a calibrated target-machine budget
+test scientific_validation::physics_angular_momentum_drift_stays_below_reference_tolerance ... ok
+test scientific_validation::physics_center_merge_conserves_mass_and_linear_momentum ... ok
+test scientific_validation::physics_center_of_mass_remains_stationary ... ok
+test scientific_validation::physics_default_softened_binary_remains_bounded ... ok
+test scientific_validation::physics_disk_equilibrium_uses_runtime_plummer_law ... ok
+test scientific_validation::physics_elemental_mass_remapping_recomputes_circular_velocities ... ok
+test scientific_validation::physics_inclined_generation_uses_projected_orbital_radius ... ok
+test scientific_validation::physics_linear_momentum_is_conserved_in_an_isolated_binary ... ok
+test scientific_validation::physics_production_steps_conserve_mass_without_collisions ... ok
+test scientific_validation::physics_symplectic_energy_drift_remains_bounded ... ok
+test scientific_validation::property_barnes_hut_rms_force_error_is_below_five_percent ... ok
+test scientific_validation::property_bond_forces_are_restricted_to_bonded_bodies ... ok
+test scientific_validation::property_bounded_inputs_never_produce_nan_or_infinity ... ok
+test scientific_validation::property_element_gravity_does_not_create_self_pressure ... ok
+test scientific_validation::property_exact_tree_traversal_matches_direct_summation ... ok
+test scientific_validation::property_gravity_is_rotation_covariant ... ok
+test scientific_validation::property_gravity_is_translation_invariant ... ok
+test scientific_validation::property_mixed_precision_force_orders_stay_below_eight_percent ... ok
+test scientific_validation::property_pair_forces_obey_newtons_third_law ... ok
+test scientific_validation::property_simulation_attract_force_error_stays_below_eight_percent ... ok
+test scientific_validation::regression_equal_mass_binary_remains_on_a_bounded_circular_orbit ... ok
+test scientific_validation::regression_softened_force_matches_independent_snapshot ... ok
+test scientific_validation::shader_cpu_gas_billboard_alpha_layers_are_bounded_and_ordered ... ok
+test scientific_validation::shader_optional_glsl_artifact_parses_and_validates_with_naga ... ok
+test scientific_validation::unit_body_integration_remains_semi_implicit_euler ... ok
+test scientific_validation::unit_octree_mass_and_center_of_mass_are_exact ... ok
+test scientific_validation::unit_plummer_softened_gravity_matches_analytic_reference ... ok
+test scientific_validation::unit_unsoftened_gravity_follows_inverse_square_law ... ok
+test scientific_validation::unit_zero_distance_self_force_is_finite_and_zero ... ok
+test scientific_validation::validation_accounts_conservative_transfer_preserves_totals ... ok
+test simulation::tests::galactic_atom_mode_respects_selected_elements_and_body_budget ... ok
+test simulation::tests::manual_element_spawn_preserves_selection_and_gets_a_stable_id ... ok
+test simulation::tests::molecular_spring_force_conserves_pair_momentum_and_breaks_at_threshold ... ok
+test simulation::tests::molecule_composition_resolves_known_compounds ... ok
+test simulation::tests::paired_galaxy_default_remains_unlabelled ... ok
+test simulation::tests::roles_default_to_reservoir_when_no_triggers ... FAILED
+test simulation::tests::roles_update_normalizes_and_applies_small_acceleration ... ok
+test simulation::tests::unlike_element_collision_forms_a_persistent_bond ... ok
+test tables::tests::delegate_reflects_accounts ... ok
+test tables::tests::transfer_between_tables_uses_capacity ... ok
+test timescales::tests::default_intervals_are_reasonable ... ok
+test timescales::tests::scheduler_ticks_as_expected ... ok
+
+failures:
+
+---- simulation::tests::roles_default_to_reservoir_when_no_triggers stdout ----
+
+thread 'simulation::tests::roles_default_to_reservoir_when_no_triggers' (17280) panicked at src\simulation.rs:1633:9:
+reservoir should dominate when no triggers
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    simulation::tests::roles_default_to_reservoir_when_no_triggers
+
+test result: FAILED. 70 passed; 1 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+error: test failed, to rerun pass `--bin barnes-hut`
+2) cargo clippy (treat warnings as errors)
+    Checking barnes-hut v0.1.0 (F:\Games\deadlock_fork_elements)
+error: function `set_counter` is never used
+  --> src\id_alloc.rs:14:8
+   |
+14 | pub fn set_counter(v: u64) {
+   |        ^^^^^^^^^^^
+   |
+   = note: `-D dead-code` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[expect(dead_code)]` or `#[allow(dead_code)]`
+
+error: struct `CompoundDefinition` is never constructed
+  --> src\molecules.rs:14:12
+   |
+14 | pub struct CompoundDefinition {
+   |            ^^^^^^^^^^^^^^^^^^
+
+error: constant `KNOWN_COMPOUNDS` is never used
+  --> src\molecules.rs:20:11
+   |
+20 | pub const KNOWN_COMPOUNDS: &[CompoundDefinition] = &[
+   |           ^^^^^^^^^^^^^^^
+
+error: function `identify_compound` is never used
+   --> src\molecules.rs:153:8
+    |
+153 | pub fn identify_compound(composition: &[(u8, u16)]) -> Option<&'static CompoundDefinition> {
+    |        ^^^^^^^^^^^^^^^^^
+
+error: function `empirical_formula` is never used
+   --> src\molecules.rs:160:8
+    |
+160 | pub fn empirical_formula(composition: &[(u8, u16)]) -> Option<String> {
+    |        ^^^^^^^^^^^^^^^^^
+
+error: function `normalize_composition` is never used
+   --> src\molecules.rs:173:4
+    |
+173 | fn normalize_composition(composition: &[(u8, u16)]) -> Option<Vec<(u8, u16)>> {
+    |    ^^^^^^^^^^^^^^^^^^^^^
+
+error: methods `recompute_institutions` and `identified_compound` are never used
+   --> src\simulation.rs:164:8
+    |
+ 43 | impl Simulation {
+    | --------------- methods in this implementation
+...
+164 |     fn recompute_institutions(&mut self) {
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+...
+746 |     pub fn identified_compound(
+    |            ^^^^^^^^^^^^^^^^^^^
+
+error: used consecutive `str::replace` call
+   --> src\config.rs:357:18
+    |
+357 |                   .replace(':', ".")
+    |  __________________^
+358 | |                 .replace(';', ".")
+    | |__________________________________^ help: replace with: `replace([':', ';'], ".")`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#collapsible_str_replace
+    = note: `-D clippy::collapsible-str-replace` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::collapsible_str_replace)]`
+
+error: float has excessive precision
+  --> src\elements.rs:89:43
+   |
+89 |     element_record!(21, "Sc", "Scandium", 44.955909, 4, 3, Some(1.36)),
+   |                                           ^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+   = note: `-D clippy::excessive-precision` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::excessive_precision)]`
+help: consider changing the type or truncating it to
+   |
+89 -     element_record!(21, "Sc", "Scandium", 44.955909, 4, 3, Some(1.36)),
+89 +     element_record!(21, "Sc", "Scandium", 44.955_91, 4, 3, Some(1.36)),
+   |
+
+error: float has excessive precision
+   --> src\elements.rs:101:42
+    |
+101 |     element_record!(33, "As", "Arsenic", 74.921596, 4, 15, Some(2.18)),
+    |                                          ^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+101 -     element_record!(33, "As", "Arsenic", 74.921596, 4, 15, Some(2.18)),
+101 +     element_record!(33, "As", "Arsenic", 74.921_59, 4, 15, Some(2.18)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:109:42
+    |
+109 |     element_record!(41, "Nb", "Niobium", 92.906372, 5, 5, Some(1.6)),
+    |                                          ^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+109 -     element_record!(41, "Nb", "Niobium", 92.906372, 5, 5, Some(1.6)),
+109 +     element_record!(41, "Nb", "Niobium", 92.906_37, 5, 5, Some(1.6)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:113:42
+    |
+113 |     element_record!(45, "Rh", "Rhodium", 102.905502, 5, 9, Some(2.28)),
+    |                                          ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+113 -     element_record!(45, "Rh", "Rhodium", 102.905502, 5, 9, Some(2.28)),
+113 +     element_record!(45, "Rh", "Rhodium", 102.905_5, 5, 9, Some(2.28)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:121:40
+    |
+121 |     element_record!(53, "I", "Iodine", 126.904473, 5, 17, Some(2.66)),
+    |                                        ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+121 -     element_record!(53, "I", "Iodine", 126.904473, 5, 17, Some(2.66)),
+121 +     element_record!(53, "I", "Iodine", 126.904_47, 5, 17, Some(2.66)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:123:41
+    |
+123 |     element_record!(55, "Cs", "Cesium", 132.905452, 6, 1, Some(0.79)),
+    |                                         ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+123 -     element_record!(55, "Cs", "Cesium", 132.905452, 6, 1, Some(0.79)),
+123 +     element_record!(55, "Cs", "Cesium", 132.905_46, 6, 1, Some(0.79)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:125:44
+    |
+125 |     element_record!(57, "La", "Lanthanum", 138.905477, 6, 3, Some(1.1)),
+    |                                            ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+125 -     element_record!(57, "La", "Lanthanum", 138.905477, 6, 3, Some(1.1)),
+125 +     element_record!(57, "La", "Lanthanum", 138.905_47, 6, 3, Some(1.1)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:127:47
+    |
+127 |     element_record!(59, "Pr", "Praseodymium", 140.907662, 6, 3, Some(1.13)),
+    |                                               ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+127 -     element_record!(59, "Pr", "Praseodymium", 140.907662, 6, 3, Some(1.13)),
+127 +     element_record!(59, "Pr", "Praseodymium", 140.907_67, 6, 3, Some(1.13)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:133:42
+    |
+133 |     element_record!(65, "Tb", "Terbium", 158.925352, 6, 3, Some(1.1)),
+    |                                          ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+133 -     element_record!(65, "Tb", "Terbium", 158.925352, 6, 3, Some(1.1)),
+133 +     element_record!(65, "Tb", "Terbium", 158.925_35, 6, 3, Some(1.1)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:135:42
+    |
+135 |     element_record!(67, "Ho", "Holmium", 164.930332, 6, 3, Some(1.23)),
+    |                                          ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+135 -     element_record!(67, "Ho", "Holmium", 164.930332, 6, 3, Some(1.23)),
+135 +     element_record!(67, "Ho", "Holmium", 164.930_33, 6, 3, Some(1.23)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:137:42
+    |
+137 |     element_record!(69, "Tm", "Thulium", 168.934222, 6, 3, Some(1.25)),
+    |                                          ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+137 -     element_record!(69, "Tm", "Thulium", 168.934222, 6, 3, Some(1.25)),
+137 +     element_record!(69, "Tm", "Thulium", 168.934_22, 6, 3, Some(1.25)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:141:43
+    |
+141 |     element_record!(73, "Ta", "Tantalum", 180.947882, 6, 5, Some(1.5)),
+    |                                           ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+141 -     element_record!(73, "Ta", "Tantalum", 180.947882, 6, 5, Some(1.5)),
+141 +     element_record!(73, "Ta", "Tantalum", 180.947_88, 6, 5, Some(1.5)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:151:42
+    |
+151 |     element_record!(83, "Bi", "Bismuth", 208.980401, 6, 15, Some(2.02)),
+    |                                          ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+151 -     element_record!(83, "Bi", "Bismuth", 208.980401, 6, 15, Some(2.02)),
+151 +     element_record!(83, "Bi", "Bismuth", 208.980_41, 6, 15, Some(2.02)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:159:47
+    |
+159 |     element_record!(91, "Pa", "Protactinium", 231.035882, 7, 3, Some(1.5)),
+    |                                               ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+159 -     element_record!(91, "Pa", "Protactinium", 231.035882, 7, 3, Some(1.5)),
+159 +     element_record!(91, "Pa", "Protactinium", 231.035_89, 7, 3, Some(1.5)),
+    |
+
+error: float has excessive precision
+   --> src\elements.rs:160:41
+    |
+160 |     element_record!(92, "U", "Uranium", 238.028913, 7, 3, Some(1.38)),
+    |                                         ^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#excessive_precision
+help: consider changing the type or truncating it to
+    |
+160 -     element_record!(92, "U", "Uranium", 238.028913, 7, 3, Some(1.38)),
+160 +     element_record!(92, "U", "Uranium", 238.028_92, 7, 3, Some(1.38)),
+    |
+
+error: this `if` statement can be collapsed
+   --> src\elements.rs:305:5
+    |
+305 | /     if first.family == ElementFamily::NobleGas || second.family == ElementFamily::NobleGas {
+306 | |         if first.reactivity_score() < 0.15 || second.reactivity_score() < 0.15 {
+307 | |             return BindingTendency::Inert;
+308 | |         }
+309 | |     }
+    | |_____^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#collapsible_if
+    = note: `-D clippy::collapsible-if` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::collapsible_if)]`
+help: collapse nested if block
+    |
+305 ~     if (first.family == ElementFamily::NobleGas || second.family == ElementFamily::NobleGas) {
+306 ~         && (first.reactivity_score() < 0.15 || second.reactivity_score() < 0.15) {
+307 |             return BindingTendency::Inert;
+308 ~         }
+    |
+
+error: this `if` statement can be collapsed
+   --> src\renderer.rs:251:9
+    |
+251 | /         if !self.bodies.is_empty() {
+252 | |             if self.show_bodies {
+253 | |                 for body in &self.bodies {
+254 | |                     if let Some((pos, z)) = self.project_point_basis(
+...   |
+298 | |         }
+    | |_________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+251 ~         if !self.bodies.is_empty()
+252 ~             && self.show_bodies {
+253 |                 for body in &self.bodies {
+...
+296 |                 }
+297 ~             }
+    |
+
+error: casting to the same type is unnecessary (`f32` -> `f32`)
+   --> src\renderer.rs:520:37
+    |
+520 |                 let radius_layout = (rect.width().min(rect.height()) * 0.4) as f32;
+    |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `(rect.width().min(rect.height()) * 0.4)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#unnecessary_cast
+    = note: `-D clippy::unnecessary-cast` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::unnecessary_cast)]`
+
+error: this `if` statement can be collapsed
+   --> src\renderer.rs:567:29
+    |
+567 | / ...                   if dist <= node_r * 1.2 {
+568 | | ...                       if best.is_none() || dist < best.unwrap().1 {
+569 | | ...                           best = Some((*id, dist));
+570 | | ...                       }
+571 | | ...                   }
+    | |_______________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+567 ~                             if dist <= node_r * 1.2
+568 ~                                 && (best.is_none() || dist < best.unwrap().1) {
+569 |                                     best = Some((*id, dist));
+570 ~                                 }
+    |
+
+error: this function has too many arguments (8/7)
+   --> src\renderer.rs:676:5
+    |
+676 | /     fn project_point_basis(
+677 | |         &self,
+678 | |         point: Vec3,
+679 | |         cam_pos: Vec3,
+...   |
+684 | |         aspect: f32,
+685 | |     ) -> Option<(Vec2, f32)> {
+    | |____________________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#too_many_arguments
+    = note: `-D clippy::too-many-arguments` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::too_many_arguments)]`
+
+error: this `if` statement can be collapsed
+   --> src\simulation.rs:823:9
+    |
+823 | /         if self
+824 | |             .timescale_scheduler
+825 | |             .should_update(self.config.role_update_interval)
+...   |
+831 | |         }
+    | |_________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+825 ~             .should_update(self.config.role_update_interval)
+826 ~             && self.config.enable_flow_dynamics_model {
+827 |                 self.update_roles();
+828 |                 eprintln!("≡ƒº¡ Role update executed at frame {}", self.frame);
+829 ~             }
+    |
+
+error: this `if` statement can be collapsed
+   --> src\simulation.rs:835:9
+    |
+835 | /         if self.frame % self.config.collision_interval == 0 {
+836 | |             if renderer::COLLISIONS_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
+837 | |                 self.collide();
+838 | |             }
+839 | |         }
+    | |_________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+835 ~         if self.frame % self.config.collision_interval == 0
+836 ~             && renderer::COLLISIONS_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
+837 |                 self.collide();
+838 ~             }
+    |
+
+error: manual implementation of `.is_multiple_of()`
+   --> src\simulation.rs:835:12
+    |
+835 |         if self.frame % self.config.collision_interval == 0 {
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace with: `self.frame.is_multiple_of(self.config.collision_interval)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#manual_is_multiple_of
+    = note: `-D clippy::manual-is-multiple-of` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::manual_is_multiple_of)]`
+
+error: manual implementation of `.is_multiple_of()`
+   --> src\simulation.rs:840:12
+    |
+840 |         if self.frame % self.config.attract_interval == 0 {
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace with: `self.frame.is_multiple_of(self.config.attract_interval)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#manual_is_multiple_of
+
+error: this `if` statement can be collapsed
+   --> src\simulation.rs:849:9
+    |
+849 | /         if self
+850 | |             .timescale_scheduler
+851 | |             .should_update(self.config.institution_recompute_interval)
+...   |
+867 | |         }
+    | |_________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+851 ~             .should_update(self.config.institution_recompute_interval)
+852 ~             && self.config.enable_flow_dynamics_model {
+853 |                 // Refresh galaxy snapshots and run emergence heuristics per galaxy
+...
+864 |                 }
+865 ~             }
+    |
+
+error: manual implementation of `.is_multiple_of()`
+   --> src\main.rs:225:8
+    |
+225 |     if frame % interval == 0 {
+    |        ^^^^^^^^^^^^^^^^^^^^^ help: replace with: `frame.is_multiple_of(interval)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#manual_is_multiple_of
+
+error: method `recompute_institutions` is never used
+   --> src\simulation.rs:164:8
+    |
+ 43 | impl Simulation {
+    | --------------- method in this implementation
+...
+164 |     fn recompute_institutions(&mut self) {
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `-D dead-code` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[expect(dead_code)]` or `#[allow(dead_code)]`
+
+error: could not compile `barnes-hut` (bin "barnes-hut") due to 34 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: field assignment outside of initializer for an instance created with Default::default()
+    --> src\simulation.rs:1453:9
+     |
+1453 |         config.enable_galactic_atom_simulation = true;
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+note: consider initializing the variable with `config::InformationsConfig { enable_galactic_atom_simulation: true, element_atomic_numbers: vec![6, 8], element_atomic_count: 12, ..Default::default() }` and removing relevant reassignments
+    --> src\simulation.rs:1452:9
+     |
+1452 |         let mut config = InformationsConfig::default();
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#field_reassign_with_default
+     = note: `-D clippy::field-reassign-with-default` implied by `-D warnings`
+     = help: to override `-D warnings` add `#[allow(clippy::field_reassign_with_default)]`
+
+error: field assignment outside of initializer for an instance created with Default::default()
+    --> src\simulation.rs:1478:9
+     |
+1478 |         config.n = 8;
+     |         ^^^^^^^^^^^^^
+     |
+note: consider initializing the variable with `config::InformationsConfig { n: 8, enable_elemental_galaxy_pair_mode: false, ..Default::default() }` and removing relevant reassignments
+    --> src\simulation.rs:1477:9
+     |
+1477 |         let mut config = InformationsConfig::default();
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#field_reassign_with_default
+
+error: field assignment outside of initializer for an instance created with Default::default()
+    --> src\simulation.rs:1493:9
+     |
+1493 |         config.n = 8;
+     |         ^^^^^^^^^^^^^
+     |
+note: consider initializing the variable with `config::InformationsConfig { n: 8, enable_molecular_bonding: true, molecule_max_bodies: 4, ..Default::default() }` and removing relevant reassignments
+    --> src\simulation.rs:1492:9
+     |
+1492 |         let mut config = InformationsConfig::default();
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#field_reassign_with_default
+
+error: field assignment outside of initializer for an instance created with Default::default()
+    --> src\simulation.rs:1519:9
+     |
+1519 |         config.n = 8;
+     |         ^^^^^^^^^^^^^
+     |
+note: consider initializing the variable with `config::InformationsConfig { n: 8, enable_molecular_bonding: true, molecule_max_bodies: 4, ..Default::default() }` and removing relevant reassignments
+    --> src\simulation.rs:1518:9
+     |
+1518 |         let mut config = InformationsConfig::default();
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#field_reassign_with_default
+
+error: field assignment outside of initializer for an instance created with Default::default()
+    --> src\simulation.rs:1554:9
+     |
+1554 |         config.n = 8;
+     |         ^^^^^^^^^^^^^
+     |
+note: consider initializing the variable with `config::InformationsConfig { n: 8, molecule_identify_compounds: true, ..Default::default() }` and removing relevant reassignments
+    --> src\simulation.rs:1553:9
+     |
+1553 |         let mut config = InformationsConfig::default();
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#field_reassign_with_default
+
+error: field assignment outside of initializer for an instance created with Default::default()
+    --> src\simulation.rs:1568:9
+     |
+1568 |         config.n = 8;
+     |         ^^^^^^^^^^^^^
+     |
+note: consider initializing the variable with `config::InformationsConfig { n: 8, ..Default::default() }` and removing relevant reassignments
+    --> src\simulation.rs:1567:9
+     |
+1567 |         let mut config = InformationsConfig::default();
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#field_reassign_with_default
+
+error: field assignment outside of initializer for an instance created with Default::default()
+    --> src\simulation.rs:1589:9
+     |
+1589 |         config.n = 8;
+     |         ^^^^^^^^^^^^^
+     |
+note: consider initializing the variable with `config::InformationsConfig { n: 8, enable_flow_dynamics_model: true, role_update_interval: 1, ..Default::default() }` and removing relevant reassignments
+    --> src\simulation.rs:1588:9
+     |
+1588 |         let mut config = InformationsConfig::default();
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#field_reassign_with_default
+
+error: field assignment outside of initializer for an instance created with Default::default()
+    --> src\simulation.rs:1620:9
+     |
+1620 |         config.n = 8;
+     |         ^^^^^^^^^^^^^
+     |
+note: consider initializing the variable with `config::InformationsConfig { n: 8, enable_flow_dynamics_model: true, ..Default::default() }` and removing relevant reassignments
+    --> src\simulation.rs:1619:9
+     |
+1619 |         let mut config = InformationsConfig::default();
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#field_reassign_with_default
+
+error: field assignment outside of initializer for an instance created with Default::default()
+   --> src\scientific_validation.rs:217:5
+    |
+217 |     config.n = 4;
+    |     ^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `config::InformationsConfig { n: 4, collision_interval: 100_000, accretion_spawn_rate: -1.0, ..Default::default() }` and removing relevant reassignments
+   --> src\scientific_validation.rs:216:5
+    |
+216 |     let mut config = InformationsConfig::default();
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#field_reassign_with_default
+
+error: field assignment outside of initializer for an instance created with Default::default()
+   --> src\scientific_validation.rs:233:5
+    |
+233 |     config.n = 2;
+    |     ^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `config::InformationsConfig { n: 2, collision_interval: 1, ..Default::default() }` and removing relevant reassignments
+   --> src\scientific_validation.rs:232:5
+    |
+232 |     let mut config = InformationsConfig::default();
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#field_reassign_with_default
+
+error: field assignment outside of initializer for an instance created with Default::default()
+   --> src\scientific_validation.rs:284:5
+    |
+284 |     config.n = 24;
+    |     ^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `config::InformationsConfig { n: 24, enable_disk_equilibrium_mode: false, inner_radius: 2.0, outer_radius: 20.0, central_mass: 100.0, ..Default::default() }` and removing relevant reassignments
+   --> src\scientific_validation.rs:283:5
+    |
+283 |     let mut config = InformationsConfig::default();
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#field_reassign_with_default
+
+error: field assignment outside of initializer for an instance created with Default::default()
+   --> src\scientific_validation.rs:310:5
+    |
+310 |     config.enable_galactic_atom_simulation = true;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `config::InformationsConfig { enable_galactic_atom_simulation: true, element_atomic_numbers: vec![26], element_atomic_count: 6, enable_scientific_element_gravity: true, element_prime_beta: 0.06, ..Default::default() }` and removing relevant reassignments
+   --> src\scientific_validation.rs:309:5
+    |
+309 |     let mut config = InformationsConfig::default();
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#field_reassign_with_default
+
+error: field assignment outside of initializer for an instance created with Default::default()
+   --> src\scientific_validation.rs:374:5
+    |
+374 |     config.n = 16;
+    |     ^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `config::InformationsConfig { n: 16, theta: 0.0, epsilon: 0.3, softening_scale_factor: 1.0, inflow_strength: 0.0, restore_strength: 0.0, sph_enabled: false, ..Default::default() }` and removing relevant reassignments
+   --> src\scientific_validation.rs:373:5
+    |
+373 |     let mut config = InformationsConfig::default();
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#field_reassign_with_default
+
+error: field assignment outside of initializer for an instance created with Default::default()
+   --> src\scientific_validation.rs:394:5
+    |
+394 |     config.n = 2;
+    |     ^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `config::InformationsConfig { n: 2, enable_molecular_bonding: true, inflow_strength: 0.0, restore_strength: 0.0, ..Default::default() }` and removing relevant reassignments
+   --> src\scientific_validation.rs:393:5
+    |
+393 |     let mut config = InformationsConfig::default();
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#field_reassign_with_default
+
+error: could not compile `barnes-hut` (bin "barnes-hut" test) due to 42 previous errors
+3) cargo fmt
+4) cargo build --release
+4) cargo build --release (tmp target: F:\Games\deadlock_fork_elements\target_release_20260927-085313)
+   Compiling proc-macro2 v1.0.86
+   Compiling unicode-ident v1.0.9
+   Compiling cfg-if v1.0.0
+   Compiling autocfg v1.1.0
+   Compiling winapi v0.3.9
+   Compiling version_check v0.9.4
+   Compiling windows_x86_64_msvc v0.48.0
+   Compiling once_cell v1.20.1
+   Compiling bitflags v1.3.2
+   Compiling log v0.4.19
+   Compiling windows_x86_64_msvc v0.42.2
+   Compiling lock_api v0.4.10
+   Compiling windows-targets v0.48.0
+   Compiling parking_lot_core v0.9.8
+   Compiling ahash v0.7.6
+   Compiling quote v1.0.37
+   Compiling syn v2.0.77
+   Compiling windows-targets v0.42.2
+   Compiling num-traits v0.2.19
+   Compiling smallvec v1.10.0
+   Compiling scopeguard v1.1.0
+   Compiling getrandom v0.2.10
+   Compiling shlex v1.3.0
+   Compiling thiserror v1.0.63
+   Compiling parking_lot v0.12.3
+   Compiling cc v1.1.15
+   Compiling libc v0.2.158
+   Compiling hashbrown v0.12.3
+   Compiling indexmap v1.9.3
+   Compiling raw-window-handle v0.5.2
+   Compiling com-rs v0.2.1
+   Compiling crossbeam-utils v0.8.21
+   Compiling windows-sys v0.48.0
+   Compiling ahash v0.8.11
+   Compiling backtrace v0.3.73
+   Compiling unicode-width v0.1.10
+   Compiling rustc-hash v1.1.0
+   Compiling rustc-demangle v0.1.24
+   Compiling tinyvec_macros v0.1.1
+   Compiling bit-vec v0.6.3
+   Compiling winapi-util v0.1.5
+   Compiling libloading v0.7.4
+   Compiling termcolor v1.4.1
+   Compiling khronos-egl v4.1.0
+   Compiling ash v0.37.3+1.3.251
+   Compiling ttf-parser v0.19.1
+   Compiling codespan-reporting v0.11.1
+   Compiling bit-set v0.5.3
+   Compiling tinyvec v1.6.0
+   Compiling bytemuck_derive v1.4.1
+   Compiling thiserror-impl v1.0.63
+   Compiling bytemuck v1.17.1
+   Compiling spirv v0.2.0+1.5.4
+   Compiling windows v0.44.0
+   Compiling owned_ttf_parser v0.19.0
+   Compiling gpu-descriptor-types v0.1.1
+   Compiling gpu-alloc-types v0.2.0
+   Compiling ab_glyph_rasterizer v0.1.8
+   Compiling hexf-parse v0.2.1
+   Compiling bitflags v2.13.0
+   Compiling unicode-xid v0.2.4
+   Compiling cfg_aliases v0.1.1
+   Compiling zerocopy v0.7.35
+   Compiling widestring v1.0.2
+   Compiling wgpu-types v0.16.1
+   Compiling winit v0.28.7
+   Compiling naga v0.12.3
+   Compiling ab_glyph v0.2.21
+   Compiling hassle-rs v0.10.0
+   Compiling gpu-alloc v0.5.4
+   Compiling gpu-descriptor v0.2.3
+   Compiling ecolor v0.22.0
+   Compiling emath v0.22.0
+   Compiling unicode-normalization v0.1.22
+   Compiling d3d12 v0.6.0
+   Compiling gpu-allocator v0.22.0
+   Compiling libloading v0.8.0
+   Compiling range-alloc v0.1.3
+   Compiling unicode-bidi v0.3.13
+   Compiling siphasher v0.3.11
+   Compiling renderdoc-sys v1.1.0
+   Compiling nohash-hasher v0.2.0
+   Compiling percent-encoding v2.3.0
+   Compiling profiling v1.0.8
+   Compiling rand_core v0.6.4
+   Compiling glow v0.12.3
+   Compiling arrayvec v0.7.4
+   Compiling rand v0.8.5
+   Compiling form_urlencoded v1.2.0
+   Compiling epaint v0.22.0
+   Compiling idna v0.4.0
+   Compiling phf_shared v0.11.2
+   Compiling windows-sys v0.45.0
+   Compiling instant v0.1.13
+   Compiling error-code v3.2.0
+   Compiling futures-core v0.3.28
+   Compiling clipboard-win v5.4.0
+   Compiling phf_generator v0.11.2
+   Compiling url v2.4.0
+   Compiling crossbeam-epoch v0.9.18
+   Compiling safe_arch v0.7.0
+   Compiling wgpu-hal v0.16.2
+   Compiling rayon-core v1.13.0
+   Compiling static_assertions v1.1.0
+   Compiling wide v0.7.10
+   Compiling webbrowser v0.8.10
+   Compiling crossbeam-deque v0.8.6
+   Compiling wgpu-core v0.16.1
+   Compiling phf_macros v0.11.2
+   Compiling arboard v3.4.0
+   Compiling egui v0.22.0
+   Compiling same-file v1.0.6
+   Compiling type-map v0.5.0
+   Compiling by_address v1.2.1
+   Compiling palette v0.7.6
+   Compiling palette_derive v0.7.6
+   Compiling walkdir v2.3.3
+   Compiling futures-intrusive v0.5.0
+   Compiling phf v0.11.2
+   Compiling ultraviolet v0.9.2
+   Compiling wgpu v0.16.3
+   Compiling egui-winit v0.22.0
+   Compiling winit_input_helper v0.14.1
+   Compiling egui-wgpu v0.22.0
+   Compiling crossbeam-channel v0.5.15
+   Compiling approx v0.5.1
+   Compiling filetime v0.2.29
+   Compiling fastrand v2.1.1
+   Compiling arc-swap v1.7.1
+   Compiling either v1.16.0
+   Compiling fast-srgb8 v1.0.0
+   Compiling pollster v0.3.0
+   Compiling rayon v1.12.0
+   Compiling quarkstrom v0.1.0 (https://github.com/DeadlockCode/quarkstrom?rev=8aa27dba1739f09b4d1372faa8553e64a3f0549d#8aa27dba)
+   Compiling notify v6.1.1
+   Compiling barnes-hut v0.1.0 (F:\Games\deadlock_fork_elements)
+warning: function `set_counter` is never used
+  --> src\id_alloc.rs:14:8
+   |
+14 | pub fn set_counter(v: u64) {
+   |        ^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `CompoundDefinition` is never constructed
+  --> src\molecules.rs:14:12
+   |
+14 | pub struct CompoundDefinition {
+   |            ^^^^^^^^^^^^^^^^^^
+
+warning: constant `KNOWN_COMPOUNDS` is never used
+  --> src\molecules.rs:20:11
+   |
+20 | pub const KNOWN_COMPOUNDS: &[CompoundDefinition] = &[
+   |           ^^^^^^^^^^^^^^^
+
+warning: function `identify_compound` is never used
+   --> src\molecules.rs:153:8
+    |
+153 | pub fn identify_compound(composition: &[(u8, u16)]) -> Option<&'static CompoundDefinition> {
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: function `empirical_formula` is never used
+   --> src\molecules.rs:160:8
+    |
+160 | pub fn empirical_formula(composition: &[(u8, u16)]) -> Option<String> {
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: function `normalize_composition` is never used
+   --> src\molecules.rs:173:4
+    |
+173 | fn normalize_composition(composition: &[(u8, u16)]) -> Option<Vec<(u8, u16)>> {
+    |    ^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `identified_compound` is never used
+   --> src\simulation.rs:749:12
+    |
+ 43 | impl Simulation {
+    | --------------- method in this implementation
+...
+749 |     pub fn identified_compound(
+    |            ^^^^^^^^^^^^^^^^^^^
+
+warning: `barnes-hut` (bin "barnes-hut") generated 7 warnings
+    Finished `release` profile [optimized] target(s) in 1m 35s
+5) headless smoke run (small)
+   Compiling barnes-hut v0.1.0 (F:\Games\deadlock_fork_elements)
+warning: function `set_counter` is never used
+  --> src\id_alloc.rs:14:8
+   |
+14 | pub fn set_counter(v: u64) {
+   |        ^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `CompoundDefinition` is never constructed
+  --> src\molecules.rs:14:12
+   |
+14 | pub struct CompoundDefinition {
+   |            ^^^^^^^^^^^^^^^^^^
+
+warning: constant `KNOWN_COMPOUNDS` is never used
+  --> src\molecules.rs:20:11
+   |
+20 | pub const KNOWN_COMPOUNDS: &[CompoundDefinition] = &[
+   |           ^^^^^^^^^^^^^^^
+
+warning: function `identify_compound` is never used
+   --> src\molecules.rs:153:8
+    |
+153 | pub fn identify_compound(composition: &[(u8, u16)]) -> Option<&'static CompoundDefinition> {
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: function `empirical_formula` is never used
+   --> src\molecules.rs:160:8
+    |
+160 | pub fn empirical_formula(composition: &[(u8, u16)]) -> Option<String> {
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: function `normalize_composition` is never used
+   --> src\molecules.rs:173:4
+    |
+173 | fn normalize_composition(composition: &[(u8, u16)]) -> Option<Vec<(u8, u16)>> {
+    |    ^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `identified_compound` is never used
+   --> src\simulation.rs:749:12
+    |
+ 43 | impl Simulation {
+    | --------------- method in this implementation
+...
+749 |     pub fn identified_compound(
+    |            ^^^^^^^^^^^^^^^^^^^
+
+warning: `barnes-hut` (bin "barnes-hut") generated 7 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.25s
+     Running `target\debug\barnes-hut.exe --headless-test`
+Γ£ô Config geladen: informations.md
+Headless particle movement test (2 galaxies, 20 particles each): 42 bodies
+≡ƒîî Spiral: dist=7199998.00, grav=0.00, dissipation=0.00
+ step  1: total displacement = 178.026657
+≡ƒîî Spiral: dist=7199994.00, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=7199990.00, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=7199986.00, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=7199982.00, grav=0.00, dissipation=0.00
+≡ƒº¡ Role update executed at frame 9
+≡ƒîî Spiral: dist=7199978.00, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=7199974.00, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=7199970.00, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=7199966.00, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=7199962.00, grav=0.00, dissipation=0.00
+≡ƒº¡ Role update executed at frame 19
+ step 20: total displacement = 3560.407959
+Particle movement verification: 42 / 42 moved
+All checks finished. Logs: test-output.txt, clippy-output.txt, build-output.txt, headless-output.txt

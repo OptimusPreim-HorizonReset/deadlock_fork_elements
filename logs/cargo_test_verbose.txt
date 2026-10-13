@@ -1,0 +1,273 @@
+       Fresh unicode-ident v1.0.9
+       Fresh cfg-if v1.0.0
+       Fresh autocfg v1.1.0
+       Fresh version_check v0.9.4
+       Fresh proc-macro2 v1.0.86
+       Fresh bitflags v1.3.2
+       Fresh once_cell v1.20.1
+       Fresh log v0.4.19
+       Fresh quote v1.0.37
+       Fresh winapi v0.3.9
+       Fresh syn v2.0.77
+       Fresh windows_x86_64_msvc v0.48.0
+       Fresh winapi-util v0.1.5
+       Fresh windows-targets v0.48.0
+       Fresh windows_x86_64_msvc v0.42.2
+       Fresh bytemuck_derive v1.4.1
+       Fresh scopeguard v1.1.0
+       Fresh windows-targets v0.42.2
+       Fresh smallvec v1.10.0
+       Fresh lock_api v0.4.10
+       Fresh bytemuck v1.17.1
+       Fresh parking_lot_core v0.9.8
+       Fresh getrandom v0.2.10
+       Fresh shlex v1.3.0
+       Fresh num-traits v0.2.19
+       Fresh thiserror-impl v1.0.63
+       Fresh cc v1.1.15
+       Fresh parking_lot v0.12.3
+       Fresh ahash v0.7.6
+       Fresh libloading v0.7.4
+       Fresh hashbrown v0.12.3
+       Fresh thiserror v1.0.63
+       Fresh raw-window-handle v0.5.2
+       Fresh libc v0.2.158
+       Fresh windows-sys v0.48.0
+       Fresh termcolor v1.4.1
+       Fresh ttf-parser v0.19.1
+       Fresh rustc-demangle v0.1.24
+       Fresh rustc-hash v1.1.0
+       Fresh tinyvec_macros v0.1.1
+       Fresh unicode-xid v0.2.4
+       Fresh unicode-width v0.1.10
+       Fresh bit-vec v0.6.3
+       Fresh codespan-reporting v0.11.1
+       Fresh backtrace v0.3.73
+       Fresh pp-rs v0.2.1
+       Fresh tinyvec v1.6.0
+       Fresh bit-set v0.5.3
+       Fresh crossbeam-utils v0.8.21
+       Fresh owned_ttf_parser v0.19.0
+       Fresh com-rs v0.2.1
+       Fresh indexmap v1.9.3
+       Fresh spirv v0.2.0+1.5.4
+       Fresh windows v0.44.0
+       Fresh gpu-descriptor-types v0.1.1
+       Fresh gpu-alloc-types v0.2.0
+       Fresh zerocopy v0.7.35
+       Fresh cfg_aliases v0.1.1
+       Fresh ab_glyph_rasterizer v0.1.8
+       Fresh bitflags v2.13.0
+       Fresh hexf-parse v0.2.1
+       Fresh widestring v1.0.2
+       Fresh gpu-descriptor v0.2.3
+       Fresh ab_glyph v0.2.21
+       Fresh hassle-rs v0.10.0
+       Fresh wgpu-types v0.16.1
+       Fresh naga v0.12.3
+       Fresh gpu-alloc v0.5.4
+       Fresh gpu-allocator v0.22.0
+       Fresh ahash v0.8.11
+       Fresh ash v0.37.3+1.3.251
+       Fresh khronos-egl v4.1.0
+       Fresh unicode-normalization v0.1.22
+       Fresh libloading v0.8.0
+       Fresh d3d12 v0.6.0
+       Fresh emath v0.22.0
+       Fresh ecolor v0.22.0
+       Fresh profiling v1.0.8
+       Fresh glow v0.12.3
+       Fresh renderdoc-sys v1.1.0
+       Fresh siphasher v0.3.11
+       Fresh nohash-hasher v0.2.0
+       Fresh unicode-bidi v0.3.13
+       Fresh rand_core v0.6.4
+       Fresh arrayvec v0.7.4
+       Fresh percent-encoding v2.3.0
+       Fresh range-alloc v0.1.3
+       Fresh form_urlencoded v1.2.0
+       Fresh phf_shared v0.11.2
+       Fresh epaint v0.22.0
+       Fresh idna v0.4.0
+       Fresh rand v0.8.5
+       Fresh wgpu-hal v0.16.2
+       Fresh windows-sys v0.45.0
+       Fresh instant v0.1.13
+       Fresh error-code v3.2.0
+       Fresh wgpu-core v0.16.1
+       Fresh clipboard-win v5.4.0
+       Fresh winit v0.28.7
+       Fresh url v2.4.0
+       Fresh phf_generator v0.11.2
+       Fresh crossbeam-epoch v0.9.18
+       Fresh safe_arch v0.7.0
+       Fresh static_assertions v1.1.0
+       Fresh phf_macros v0.11.2
+       Fresh arboard v3.4.0
+       Fresh crossbeam-deque v0.8.6
+       Fresh wide v0.7.10
+       Fresh wgpu v0.16.3
+       Fresh webbrowser v0.8.10
+       Fresh futures-core v0.3.28
+       Fresh egui v0.22.0
+       Fresh type-map v0.5.0
+       Fresh same-file v1.0.6
+       Fresh by_address v1.2.1
+       Fresh ultraviolet v0.9.2
+       Fresh palette_derive v0.7.6
+       Fresh egui-winit v0.22.0
+       Fresh walkdir v2.3.3
+       Fresh egui-wgpu v0.22.0
+       Fresh rayon-core v1.13.0
+       Fresh futures-intrusive v0.5.0
+       Fresh phf v0.11.2
+       Fresh winit_input_helper v0.14.1
+       Fresh crossbeam-channel v0.5.15
+       Fresh approx v0.5.1
+       Fresh filetime v0.2.29
+       Fresh fast-srgb8 v1.0.0
+       Fresh arc-swap v1.7.1
+       Fresh fastrand v2.1.1
+       Fresh pollster v0.3.0
+       Fresh either v1.16.0
+       Fresh notify v6.1.1
+       Fresh rayon v1.12.0
+       Fresh palette v0.7.6
+       Fresh quarkstrom v0.1.0 (https://github.com/DeadlockCode/quarkstrom?rev=8aa27dba1739f09b4d1372faa8553e64a3f0549d#8aa27dba)
+       Dirty barnes-hut v0.1.0 (F:\Games\deadlock_fork_elements): the file `src\renderer.rs` has changed (13434959249.518533300s, 53m 3s after last build at 13434956066.456319600s)
+   Compiling barnes-hut v0.1.0 (F:\Games\deadlock_fork_elements)
+     Running `rustc --crate-name barnes_hut --edition=2021 src\main.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=55a3c9f5fd60beba -C extra-filename=-358cb1eebfeae459 --out-dir F:\Games\deadlock_fork_elements\target\debug\deps -C incremental=F:\Games\deadlock_fork_elements\target\debug\incremental -L dependency=F:\Games\deadlock_fork_elements\target\debug\deps --extern crossbeam_channel=F:\Games\deadlock_fork_elements\target\debug\deps\libcrossbeam_channel-543fba617f8927f1.rlib --extern fastrand=F:\Games\deadlock_fork_elements\target\debug\deps\libfastrand-3c7c26d366096a36.rlib --extern naga=F:\Games\deadlock_fork_elements\target\debug\deps\libnaga-c495e2f0ac159371.rlib --extern notify=F:\Games\deadlock_fork_elements\target\debug\deps\libnotify-ad7abed7dfb2c19e.rlib --extern once_cell=F:\Games\deadlock_fork_elements\target\debug\deps\libonce_cell-439cdfb41d8ddb4c.rlib --extern palette=F:\Games\deadlock_fork_elements\target\debug\deps\libpalette-00264d05dec9969a.rlib --extern parking_lot=F:\Games\deadlock_fork_elements\target\debug\deps\libparking_lot-e09af98b7ba62fda.rlib --extern quarkstrom=F:\Games\deadlock_fork_elements\target\debug\deps\libquarkstrom-4483e53b3d43d89e.rlib --extern rayon=F:\Games\deadlock_fork_elements\target\debug\deps\librayon-311ea4b27f7123b6.rlib --extern ultraviolet=F:\Games\deadlock_fork_elements\target\debug\deps\libultraviolet-ccecd80bfa0e6ca9.rlib -L "native=C:\Users\Soliak 2. PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows_x86_64_msvc-0.48.0\lib" -L "native=C:\Users\Soliak 2. PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows_x86_64_msvc-0.42.2\lib"`
+warning: unused variable: `id`
+   --> src\renderer.rs:525:26
+    |
+525 |                     let (id, pos) = node_positions[i];
+    |                          ^^ help: if this is intentional, prefix it with an underscore: `_id`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: variant `Satellite` is never constructed
+  --> src\body.rs:10:5
+   |
+ 4 | pub enum BodySegment {
+   |          ----------- variant in this enum
+...
+10 |     Satellite,
+   |     ^^^^^^^^^
+   |
+   = note: `BodySegment` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: fields `roles`, `local_angular_momentum`, `magnetization`, and `accretion_ejection_bias` are never read
+  --> src\body.rs:34:9
+   |
+16 | pub struct Body {
+   |            ---- fields in this struct
+...
+34 |     pub roles: crate::roles::RoleWeights,
+   |         ^^^^^
+35 |     // Local angular momentum and magnetization used by role/rules
+36 |     pub local_angular_momentum: Vec3,
+   |         ^^^^^^^^^^^^^^^^^^^^^^
+37 |     pub magnetization: f32,
+   |         ^^^^^^^^^^^^^
+38 |     // Bias controlling accretion vs ejection tendency (range may be normalized elsewhere)
+39 |     pub accretion_ejection_bias: f32,
+   |         ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `Body` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: fields `atomic_weight_is_estimated`, `group`, and `pauling_electronegativity` are never read
+  --> src\elements.rs:41:9
+   |
+36 | pub struct ElementDefinition {
+   |            ----------------- fields in this struct
+...
+41 |     pub atomic_weight_is_estimated: bool,
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+42 |     pub period: u8,
+43 |     pub group: u8,
+   |         ^^^^^
+44 |     pub family: ElementFamily,
+45 |     pub pauling_electronegativity: Option<f32>,
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `ElementDefinition` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: `barnes-hut` (bin "barnes-hut" test) generated 4 warnings (run `cargo fix --bin "barnes-hut" -p barnes-hut --tests` to apply 1 suggestion)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.47s
+     Running `F:\Games\deadlock_fork_elements\target\debug\deps\barnes_hut-358cb1eebfeae459.exe`
+
+running 70 tests
+test accounts::tests::conservative_transfer_preserves_totals_when_within_capacity ... ok
+test accounts::tests::scalar_transfer_is_clamped_by_capacity_and_availability ... ok
+test accounts::tests::vector_momentum_transfer_respects_direction_and_capacity ... ok
+test config::tests::atomic_number_lists_accept_empty_and_valid_lists ... ok
+test config::tests::explicit_mode_setting_takes_precedence_over_legacy_alias ... ok
+test contact_parliament::tests::negotiation_preserves_total_angular_momentum ... ok
+test elements::tests::catalog_contains_all_118_ordered_elements ... ok
+test elements::tests::chemistry_families_match_documented_extremes ... ok
+test elements::tests::element_colors_are_finite_and_bounded ... ok
+test elements::tests::missing_electronegativities_are_explicitly_estimated ... ok
+test elements::tests::reactivity_extremes_and_binding_classes_are_bounded ... ok
+test elements::tests::scientific_gravity_is_hydrogen_normalized_and_orders_heavy_elements ... ok
+test emergence::tests::emergence_v1_creates_table_when_threshold_exceeded ... ok
+test emergence::tests::emergence_v1_no_table_when_below_threshold ... ok
+test emergence::tests::emergence_v1_registers_table_in_registry_when_enabled ... ok
+test galaxy::tests::galaxy_aggregates_mass_and_momentum ... ok
+test galaxy_tree::tests::galaxy_tree_inserts_and_accumulates_mass ... ok
+test gas::tests::alpha_layers_are_bounded_and_outer_to_inner_ordered ... ok
+test gas::tests::invalid_gas_visual_inputs_are_sanitized ... ok
+test history::tests::history_records_and_stability ... ok
+test molecules::tests::compound_identification_is_order_independent ... ok
+test molecules::tests::compound_library_includes_documented_organic_and_mineral_examples ... ok
+test molecules::tests::unknown_valid_compositions_keep_a_deterministic_formula ... ok
+test render_mode::tests::render_mode_variants_match_expected_order ... ok
+test roles::tests::default_is_reservoir ... ok
+test roles::tests::normalize_works ... ok
+test scientific_validation::performance_body_memory_stays_within_repository_budget ... ok
+test scientific_validation::performance_four_x_particle_scaling_stays_below_twelve_x_runtime ... ignored, hardware scaling timing is opt-in
+test scientific_validation::performance_octree_node_growth_remains_linear ... ok
+test scientific_validation::performance_optional_4096_body_timing_stays_within_calibrated_budget ... ignored, hardware timing requires a calibrated target-machine budget
+test scientific_validation::physics_angular_momentum_drift_stays_below_reference_tolerance ... ok
+test scientific_validation::physics_center_merge_conserves_mass_and_linear_momentum ... ok
+test scientific_validation::physics_center_of_mass_remains_stationary ... ok
+test scientific_validation::physics_default_softened_binary_remains_bounded ... ok
+test scientific_validation::physics_disk_equilibrium_uses_runtime_plummer_law ... ok
+test scientific_validation::physics_elemental_mass_remapping_recomputes_circular_velocities ... ok
+test scientific_validation::physics_inclined_generation_uses_projected_orbital_radius ... ok
+test scientific_validation::physics_linear_momentum_is_conserved_in_an_isolated_binary ... ok
+test scientific_validation::physics_production_steps_conserve_mass_without_collisions ... ok
+test scientific_validation::physics_symplectic_energy_drift_remains_bounded ... ok
+test scientific_validation::property_barnes_hut_rms_force_error_is_below_five_percent ... ok
+test scientific_validation::property_bond_forces_are_restricted_to_bonded_bodies ... ok
+test scientific_validation::property_bounded_inputs_never_produce_nan_or_infinity ... ok
+test scientific_validation::property_element_gravity_does_not_create_self_pressure ... ok
+test scientific_validation::property_exact_tree_traversal_matches_direct_summation ... ok
+test scientific_validation::property_gravity_is_rotation_covariant ... ok
+test scientific_validation::property_gravity_is_translation_invariant ... ok
+test scientific_validation::property_mixed_precision_force_orders_stay_below_eight_percent ... ok
+test scientific_validation::property_pair_forces_obey_newtons_third_law ... ok
+test scientific_validation::property_simulation_attract_force_error_stays_below_eight_percent ... ok
+test scientific_validation::regression_equal_mass_binary_remains_on_a_bounded_circular_orbit ... ok
+test scientific_validation::regression_softened_force_matches_independent_snapshot ... ok
+test scientific_validation::shader_cpu_gas_billboard_alpha_layers_are_bounded_and_ordered ... ok
+test scientific_validation::shader_optional_glsl_artifact_parses_and_validates_with_naga ... ok
+test scientific_validation::unit_body_integration_remains_semi_implicit_euler ... ok
+test scientific_validation::unit_octree_mass_and_center_of_mass_are_exact ... ok
+test scientific_validation::unit_plummer_softened_gravity_matches_analytic_reference ... ok
+test scientific_validation::unit_unsoftened_gravity_follows_inverse_square_law ... ok
+test scientific_validation::unit_zero_distance_self_force_is_finite_and_zero ... ok
+test scientific_validation::validation_accounts_conservative_transfer_preserves_totals ... ok
+test simulation::tests::galactic_atom_mode_respects_selected_elements_and_body_budget ... ok
+test simulation::tests::manual_element_spawn_preserves_selection_and_gets_a_stable_id ... ok
+test simulation::tests::molecular_spring_force_conserves_pair_momentum_and_breaks_at_threshold ... ok
+test simulation::tests::molecule_composition_resolves_known_compounds ... ok
+test simulation::tests::paired_galaxy_default_remains_unlabelled ... ok
+test simulation::tests::unlike_element_collision_forms_a_persistent_bond ... ok
+test tables::tests::delegate_reflects_accounts ... ok
+test tables::tests::transfer_between_tables_uses_capacity ... ok
+test timescales::tests::default_intervals_are_reasonable ... ok
+test timescales::tests::scheduler_ticks_as_expected ... ok
+
+test result: ok. 68 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.06s
+

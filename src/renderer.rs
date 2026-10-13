@@ -6,13 +6,15 @@ use std::{
 };
 
 use crate::{
-    body::{Body, BodySegment},
+    body::BodySegment,
     elements::element_by_atomic_number,
     gas::GasBillboard,
     quadtree::{Node, Octree},
     render_mode::RenderMode,
     tables::TABLES,
 };
+use std::time::Instant;
+use std::sync::atomic::AtomicUsize;
 
 use quarkstrom::{egui, winit::event::VirtualKeyCode, winit_input_helper::WinitInputHelper};
 
@@ -33,6 +35,14 @@ pub static CHEMISTRY_COMPASS_COLORING: Lazy<AtomicBool> = Lazy::new(|| false.int
 // Request from other threads to re-run the camera auto-fit on next bodies update
 pub static CAMERA_AUTOFIT_REQUEST: Lazy<AtomicBool> = Lazy::new(|| false.into());
 
+// Force camera override (for debugging): when enabled, renderer will use the provided
+// target and distance instead of the computed auto-fit. Set from other threads via
+// renderer::FORCE_CAMERA_TARGET / renderer::FORCE_CAMERA_DISTANCE and enable via
+// renderer::FORCE_CAMERA.store(true, Ordering::Relaxed).
+pub static FORCE_CAMERA: Lazy<AtomicBool> = Lazy::new(|| false.into());
+pub static FORCE_CAMERA_TARGET: Lazy<Mutex<Vec3>> = Lazy::new(|| Mutex::new(Vec3::zero()));
+pub static FORCE_CAMERA_DISTANCE: Lazy<Mutex<f32>> = Lazy::new(|| Mutex::new(600.0));
+
 #[derive(Clone, Copy, Debug)]
 pub struct ManualSpawnRequest {
     pub position: Vec3,
@@ -41,7 +51,40 @@ pub struct ManualSpawnRequest {
     pub element_atomic_number: Option<u8>,
 }
 
-pub static BODIES: Lazy<Mutex<Vec<Body>>> = Lazy::new(|| Mutex::new(Vec::new()));
+#[derive(Clone, Copy, Debug)]
+pub struct RenderBody {
+    pub pos: Vec3,
+    pub equatorial_radius: f32,
+    pub polar_radius: f32,
+    pub rotation_axis: Vec3,
+    pub element_atomic_number: Option<u8>,
+    pub segment: BodySegment,
+    pub gas_density: f32,
+    pub gas_temperature: f32,
+}
+
+impl RenderBody {
+    pub fn from_body(b: &crate::body::Body) -> Self {
+        Self {
+            pos: b.pos,
+            equatorial_radius: b.equatorial_radius,
+            polar_radius: b.polar_radius,
+            rotation_axis: b.rotation_axis,
+            element_atomic_number: b.element_atomic_number,
+            segment: b.segment,
+            gas_density: b.gas_density,
+            gas_temperature: b.gas_temperature,
+        }
+    }
+
+    pub fn projected_radius(&self) -> f32 {
+        let depth_scale = (1.0 - self.pos.z * 0.002).clamp(0.55, 1.4);
+        self.equatorial_radius * depth_scale
+    }
+}
+
+pub static BODIES: Lazy<Mutex<Vec<RenderBody>>> = Lazy::new(|| Mutex::new(Vec::new()));
+
 pub static QUADTREE: Lazy<Mutex<Vec<Node>>> = Lazy::new(|| Mutex::new(Vec::new()));
 pub static MANUAL_SPAWNS: Lazy<Mutex<Vec<ManualSpawnRequest>>> =
     Lazy::new(|| Mutex::new(Vec::new()));
@@ -77,7 +120,7 @@ pub struct Renderer {
 
     depth_range: (usize, usize),
 
-    bodies: Vec<Body>,
+    bodies: Vec<RenderBody>,
     quadtree: Vec<Node>,
 }
 
@@ -249,9 +292,30 @@ impl quarkstrom::Renderer for Renderer {
                 // Auto-fit camera to scene extents on first body swap or when requested
                 let cam_request = CAMERA_AUTOFIT_REQUEST.swap(false, Ordering::Relaxed);
                 let mut autofit_applied = false;
-                if ((!self.camera_autofit_done) || cam_request) && bodies_count > 0 {
+                // If an external forced camera is active, prefer it over auto-fit.
+                let force_camera_enabled = FORCE_CAMERA.load(Ordering::Relaxed);
+                if force_camera_enabled && bodies_count > 0 {
+                    let mut forced_target = *FORCE_CAMERA_TARGET.lock();
+                    let mut forced_distance = *FORCE_CAMERA_DISTANCE.lock();
+                    // Sanitize forced values
+                    let world_cap = 10_000_000.0_f32;
+                    forced_target.x = forced_target.x.clamp(-world_cap, world_cap);
+                    forced_target.y = forced_target.y.clamp(-world_cap, world_cap);
+                    forced_target.z = forced_target.z.clamp(-world_cap, world_cap);
+                    if !forced_distance.is_finite() || forced_distance <= 0.0 {
+                        forced_distance = 600.0;
+                    }
+                    forced_distance = forced_distance.clamp(80.0, 2_500_000.0);
+
+                    self.camera_target = forced_target;
+                    self.camera_distance = forced_distance;
+                    self.camera_autofit_done = true;
+                    autofit_applied = true;
+                } else if ((!self.camera_autofit_done) || cam_request) && bodies_count > 0 {
+                    // Compute min/max and mean in one pass for a more robust center estimate
                     let mut min = Vec3::new(f32::MAX, f32::MAX, f32::MAX);
                     let mut max = Vec3::new(f32::MIN, f32::MIN, f32::MIN);
+                    let mut sum = Vec3::zero();
                     for b in &self.bodies {
                         min.x = min.x.min(b.pos.x);
                         min.y = min.y.min(b.pos.y);
@@ -259,11 +323,69 @@ impl quarkstrom::Renderer for Renderer {
                         max.x = max.x.max(b.pos.x);
                         max.y = max.y.max(b.pos.y);
                         max.z = max.z.max(b.pos.z);
+                        sum += b.pos;
                     }
-                    let center = (min + max) * 0.5;
-                    let extent = (max - min).mag();
-                    // Choose a distance that fits the extent with some margin; clamp to sensible range
-                    let desired_distance = (extent * 1.25).max(80.0).min(10_000_000.0);
+
+                    let count_f = bodies_count as f32;
+                    let mean = if count_f > 0.0 {
+                        sum / count_f
+                    } else {
+                        Vec3::zero()
+                    };
+
+                    // Blend min/max center and mean to reduce sensitivity to outliers
+                    let mut center = (min + max) * 0.5;
+                    center = (center + mean) * 0.5;
+
+                    // Sanitize and clamp to avoid extreme camera jumps caused by outliers or numeric issues.
+                    if !center.x.is_finite() || !center.y.is_finite() || !center.z.is_finite() {
+                        center = mean;
+                    }
+                    let world_cap = 10_000_000.0_f32; // tunable safe cap for current scenes
+                    center.x = center.x.clamp(-world_cap, world_cap);
+                    center.y = center.y.clamp(-world_cap, world_cap);
+                    center.z = center.z.clamp(-world_cap, world_cap);
+
+                    let mut extent = (max - min).mag();
+                    if !extent.is_finite() || extent <= 0.0 {
+                        extent = 80.0;
+                    }
+
+                    // Compute a distance that fits the extent with some margin
+                    let tan_half_fov = (self.camera_fov * 0.5).tan();
+                    let mut desired_distance_extent = extent * 1.25;
+                    if !desired_distance_extent.is_finite() {
+                        desired_distance_extent = 600.0;
+                    }
+
+                    // Compute a distance that makes an average body reasonably visible
+                    let sample_count = bodies_count.min(1024);
+                    let avg_eq_radius = if sample_count > 0 {
+                        self.bodies
+                            .iter()
+                            .take(sample_count)
+                            .map(|b| b.equatorial_radius)
+                            .sum::<f32>()
+                            / sample_count as f32
+                    } else {
+                        1.0
+                    };
+                    // Conservative depth-scale estimate (projected_radius uses a depth-based scale)
+                    let depth_scale_est = 0.85_f32;
+                    let min_visible_radius = 2.0_f32; // renderer-space target radius (tunable)
+                    let mut desired_distance_size = if avg_eq_radius > 0.0 {
+                        (avg_eq_radius * depth_scale_est) / (min_visible_radius * tan_half_fov)
+                    } else {
+                        desired_distance_extent
+                    };
+                    desired_distance_size = desired_distance_size.max(80.0_f32);
+
+                    // Prefer a distance that allows bodies to be visible; avoid moving so close the scene is clipped.
+                    let mut desired_distance = desired_distance_extent.min(desired_distance_size * 1.25);
+
+                    // Clamp to sensible global range
+                    desired_distance = desired_distance.clamp(80.0, 2_500_000.0);
+
                     self.camera_target = center;
                     self.camera_distance = desired_distance;
                     self.camera_autofit_done = true;
@@ -285,8 +407,12 @@ impl quarkstrom::Renderer for Renderer {
         ctx.clear_circles();
         ctx.clear_lines();
         ctx.clear_rects();
-        ctx.set_view_pos(Vec2::zero());
-        ctx.set_view_scale(1.0);
+        // Map normalized projection coords from project_point_basis into pixel space:
+        // set view origin to viewport center and scale so 1.0 unit ~ half-min-viewport pixels.
+        let width = self.viewport_size.x.max(1.0);
+        let height = self.viewport_size.y.max(1.0);
+        ctx.set_view_pos(Vec2::new(width * 0.5, height * 0.5));
+        ctx.set_view_scale(width.min(height) * 0.5);
 
         let cam_pos = self.camera_pos();
         let (forward, right, up) = self.camera_basis();
@@ -297,18 +423,48 @@ impl quarkstrom::Renderer for Renderer {
 
         if !self.bodies.is_empty() {
             if self.show_bodies {
-                for body in &self.bodies {
+                let debug_project = std::env::var("RENDER_DEBUG_LOG_PROJECT").is_ok();
+                let mut debug_logged = 0usize;
+                let debug_limit = 32usize;
+                for (i, body) in self.bodies.iter().enumerate() {
                     if let Some((pos, z)) = self.project_point_basis(
                         body.pos, cam_pos, forward, right, up, tan_half, aspect,
                     ) {
+                        // Optional per-body projected coordinate logging for debugging
+                        if debug_project && debug_logged < debug_limit {
+                            let view_pos = Vec2::new(width * 0.5, height * 0.5);
+                            let view_scale = width.min(height) * 0.5;
+                            let pixel_a = Vec2::new(view_pos.x + pos.x * view_scale, view_pos.y + pos.y * view_scale);
+                            let pixel_b = Vec2::new(view_pos.x + pos.x * view_scale, view_pos.y - pos.y * view_scale);
+                            eprintln!(
+                                "PROJECTED[{}] world={:?} ndc={:?} pixel_center_nat=({:.1},{:.1}) pixel_center_inverted=({:.1},{:.1}) z={:.3}",
+                                i, body.pos, pos, pixel_a.x, pixel_a.y, pixel_b.x, pixel_b.y, z
+                            );
+                            debug_logged += 1;
+                        }
+
                         let radius = body.projected_radius() / (z * tan_half).max(0.01);
+
+                        // Screen-space culling: skip bodies that project smaller than a pixel threshold
+                        if radius < 0.4 {
+                            continue;
+                        }
+
                         if body.segment == BodySegment::Gas {
                             let billboard =
                                 GasBillboard::new(body.gas_density, body.gas_temperature);
                             let [red, green, blue] = billboard.color();
-                            let scales = [1.8, 1.35, 1.0];
+                            // Reduce layers for small projected sizes to save draw calls
+                            let scales = if radius < 1.2 {
+                                [1.0, 0.0, 0.0]
+                            } else {
+                                [1.8, 1.35, 1.0]
+                            };
                             for (layer_index, alpha) in billboard.alpha_layers().iter().enumerate()
                             {
+                                if scales[layer_index] <= 0.0 {
+                                    continue;
+                                }
                                 ctx.draw_circle(
                                     pos,
                                     radius * scales[layer_index],

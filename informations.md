@@ -17,7 +17,7 @@ Zusätzliche Ausführungsmodi können über Umgebungsvariablen aktiviert werden:
 #   a = G*m*r / (r² + epsilon²)^(3/2)
 # n: Anzahl der Disk-Partikel pro Galaxie (ohne Zentralmasse)
 
-dt: 10.0
+dt: 1.0
 theta: 1.0
 epsilon: 1.9
 n: 2000
@@ -39,7 +39,7 @@ n: 2000
 
 inner_radius: 2.0
 outer_radius: 100000.0
-central_mass: 100000000.10
+central_mass: 10000000.10
 particle_mass_range: 10.000000000066, 250.0000000001
 
 # === SPAWN ZONE CONFIGURATION ===
@@ -82,7 +82,7 @@ restore_strength: 0.0000000000000052
 # gas_density_color_scale: Strength of density-based color modulation
 # gas_temperature_color_scale: Strength of temperature-based color modulation
 
-gas_enabled: false
+gas_enabled: true
 gas_meta_particle_count: 100000
 gas_target_neighbors: 12
 gas_volume_enabled: false
@@ -131,9 +131,9 @@ gas_temperature_color_scale: 0.9
 # prob_repeated: Wahrscheinlichkeit für periodisch wiederkehrende Begegnungen
 # prob_flyby: Wahrscheinlichkeit für intensive Flybys
 
-galaxy_separation_factor: 50.0
-galaxy_count: 60
-galaxy_volume_scatter_factor: 4.0
+galaxy_separation_factor: 5.0
+galaxy_count: 6
+galaxy_volume_scatter_factor: 2.0
 galaxy_mass_weighted_separation: true
 galaxy_separation_mass_exponent: 0.333
 galaxy_cluster_enabled: true
@@ -194,8 +194,8 @@ flyby_speed_factor: 0.90
 #   bei hohen Körperzahlen zu reduzieren.
 
 performance_dynamic_interval_scaling: true
-performance_body_count_threshold: 400000
-performance_max_interval_scale: 2
+performance_body_count_threshold: 150000
+performance_max_interval_scale: 4
 performance_render_body_limit: 400000
 performance_render_sample_ratio: 1.0
 performance_high_count_mode: false
@@ -211,7 +211,7 @@ performance_octree_reserve_factor: 4.0
 orbital_speed_multiplier: 0.025
 spawn_angular_speed_base: 0.3
 spawn_angular_speed_range: 0.5
-spin_speed_multiplier: 10.0
+spin_speed_multiplier: 1.0
 
 # === BODY DEFORMATION ===
 # equatorial_growth_factor: Wie viel der Äquator-Radius bei Rotation wächst
@@ -339,7 +339,7 @@ element_gravity_reactivity_weight: 0.2
 # molecule_max_bodies: Maximale Anzahl an Koerpern in einem dynamischen Molekuel.
 # molecule_identify_compounds: Wenn true, werden bekannte natuerliche Verbindungen
 #   (H2O, NaCl, CO2, CH4, ...) anhand der Stoechiometrie erkannt und benannt.
-enable_molecular_bonding: false
+enable_molecular_bonding: true
 molecule_bond_strength_factor: 5.0
 molecule_break_energy_threshold: 8.0
 molecule_max_bodies: 12

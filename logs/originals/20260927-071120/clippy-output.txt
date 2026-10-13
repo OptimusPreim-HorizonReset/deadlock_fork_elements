@@ -1,0 +1,2 @@
+    Checking barnes-hut v0.1.0 (F:\Games\deadlock_fork_elements)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.58s

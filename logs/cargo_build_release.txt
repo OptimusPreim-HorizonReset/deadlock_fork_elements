@@ -1,0 +1,48 @@
+   Compiling barnes-hut v0.1.0 (F:\Games\deadlock_fork_elements)
+error[E0432]: unresolved import `crate::id_alloc`
+  --> src\simulation.rs:15:5
+   |
+15 | use crate::id_alloc;
+   |     ^^^^^^^^^^^^^^^ no `id_alloc` in the root
+
+error[E0599]: no method named `cache_galaxies` found for struct `Simulation` in the current scope
+   --> src\simulation.rs:132:13
+    |
+ 19 | pub struct Simulation {
+    | --------------------- method `cache_galaxies` not found for this struct
+...
+132 |         sim.cache_galaxies();
+    |             ^^^^^^^^^^^^^^ method not found in `Simulation`
+
+error[E0063]: missing field `galaxies` in initializer of `Simulation`
+   --> src\simulation.rs:262:9
+    |
+262 |         Self {
+    |         ^^^^ missing `galaxies`
+
+error[E0689]: can't call method `max` on ambiguous numeric type `{float}`
+   --> src\simulation.rs:413:38
+    |
+413 |             rw.reservoir = reservoir.max(0.0);
+    |                                      ^^^
+    |
+help: you must specify a type for this binding, like `f32`
+    |
+403 |             let reservoir: f32 = 0.1; // baseline reservoir to avoid zero-sum
+    |                          +++++
+
+error[E0599]: no method named `cache_galaxies` found for mutable reference `&mut Simulation` in the current scope
+   --> src\simulation.rs:802:22
+    |
+802 |                 self.cache_galaxies();
+    |                      ^^^^^^^^^^^^^^ method not found in `&mut Simulation`
+
+error[E0599]: no method named `recompute_institutions` found for mutable reference `&mut Simulation` in the current scope
+   --> src\simulation.rs:803:22
+    |
+803 |                 self.recompute_institutions();
+    |                      ^^^^^^^^^^^^^^^^^^^^^^ method not found in `&mut Simulation`
+
+Some errors have detailed explanations: E0063, E0432, E0599, E0689.
+For more information about an error, try `rustc --explain E0063`.
+error: could not compile `barnes-hut` (bin "barnes-hut") due to 6 previous errors

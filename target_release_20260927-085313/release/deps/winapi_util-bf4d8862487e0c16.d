@@ -1,0 +1,10 @@
+F:\Games\deadlock_fork_elements\target_release_20260927-085313\release\deps\winapi_util-bf4d8862487e0c16.d: C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.5\src\lib.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.5\src\console.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.5\src\file.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.5\src\win.rs
+
+F:\Games\deadlock_fork_elements\target_release_20260927-085313\release\deps\libwinapi_util-bf4d8862487e0c16.rlib: C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.5\src\lib.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.5\src\console.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.5\src\file.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.5\src\win.rs
+
+F:\Games\deadlock_fork_elements\target_release_20260927-085313\release\deps\libwinapi_util-bf4d8862487e0c16.rmeta: C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.5\src\lib.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.5\src\console.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.5\src\file.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.5\src\win.rs
+
+C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.5\src\lib.rs:
+C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.5\src\console.rs:
+C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.5\src\file.rs:
+C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.5\src\win.rs:

@@ -1,0 +1,10 @@
+F:\Games\deadlock_fork_elements\target_release_20260927-084510\release\deps\getrandom-59553678f1586399.d: C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.2.10\src\lib.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.2.10\src\error.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.2.10\src\util.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.2.10\src\windows.rs
+
+F:\Games\deadlock_fork_elements\target_release_20260927-084510\release\deps\libgetrandom-59553678f1586399.rlib: C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.2.10\src\lib.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.2.10\src\error.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.2.10\src\util.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.2.10\src\windows.rs
+
+F:\Games\deadlock_fork_elements\target_release_20260927-084510\release\deps\libgetrandom-59553678f1586399.rmeta: C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.2.10\src\lib.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.2.10\src\error.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.2.10\src\util.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.2.10\src\windows.rs
+
+C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.2.10\src\lib.rs:
+C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.2.10\src\error.rs:
+C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.2.10\src\util.rs:
+C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.2.10\src\windows.rs:

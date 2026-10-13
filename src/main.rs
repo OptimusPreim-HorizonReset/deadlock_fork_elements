@@ -31,6 +31,7 @@ mod utils;
 mod scientific_validation;
 
 use renderer::Renderer;
+use ultraviolet::Vec3;
 use simulation::Simulation;
 
 fn main() {
@@ -383,9 +384,69 @@ fn render(simulation: &mut Simulation, frame: usize) {
     let mut lock = renderer::UPDATE_LOCK.lock();
     if frame % interval == 0 {
         {
+            // Convert to RenderBody outside of the renderer lock to minimize mutex hold time.
+            // To reduce conversion cost at very high body counts, respect the configured
+            // performance_render_body_limit and performance_render_sample_ratio by sampling
+            // a subset of bodies instead of converting the entire simulation.bodies Vec.
+            let body_count = simulation.bodies.len();
+            let limit = simulation.performance_render_body_limit().min(body_count);
+            // sanitize ratio into [0.0, 1.0]
+            let sample_ratio = if simulation.performance_render_sample_ratio() <= 0.0 {
+                0.0
+            } else if simulation.performance_render_sample_ratio() >= 1.0 {
+                1.0
+            } else {
+                simulation.performance_render_sample_ratio()
+            };
+
+            // Optional debug mini-publish mode: publish a small deterministic subset (useful for
+            // visual smoke tests when the full scene is too large or camera-autofit misbehaves).
+            let debug_mini = std::env::var("RENDER_DEBUG_MINI_PUBLISH").is_ok();
+
+            let mut tmp: Vec<renderer::RenderBody>;
+            if debug_mini {
+                let sample_count = body_count.min(1024);
+                tmp = Vec::with_capacity(sample_count);
+                for b in simulation.bodies.iter().take(sample_count) {
+                    tmp.push(renderer::RenderBody::from_body(b));
+                }
+            } else if body_count == 0 || limit == 0 {
+                tmp = Vec::new();
+            } else if body_count <= limit || sample_ratio >= 1.0 {
+                // Convert up to the configured limit (or all if under the limit)
+                let cap = body_count.min(limit);
+                tmp = Vec::with_capacity(cap);
+                for b in simulation.bodies.iter().take(cap) {
+                    tmp.push(renderer::RenderBody::from_body(b));
+                }
+            } else {
+                // Sample uniformly across the body array to produce approximately
+                // sample_count render entries.
+                let sample_count = ((limit as f32) * sample_ratio).round() as usize;
+                let sample_count = sample_count.max(1).min(limit);
+                tmp = Vec::with_capacity(sample_count);
+                let stride = (body_count as f32 / sample_count as f32).floor() as usize;
+                let stride = stride.max(1);
+                let mut idx = 0usize;
+                let mut produced = 0usize;
+                while produced < sample_count && idx < body_count {
+                    tmp.push(renderer::RenderBody::from_body(&simulation.bodies[idx]));
+                    produced += 1;
+                    idx += stride;
+                }
+                // If rounding left us short, fill from the tail until we reach sample_count
+                let mut j = body_count.saturating_sub(1);
+                while produced < sample_count && j > 0 {
+                    tmp.push(renderer::RenderBody::from_body(&simulation.bodies[j]));
+                    produced += 1;
+                    if j == 0 { break; }
+                    j = j.saturating_sub(1);
+                }
+            }
+
             let mut lock = renderer::BODIES.lock();
-            lock.clear();
-            lock.extend_from_slice(&simulation.bodies);
+            std::mem::swap(&mut *lock, &mut tmp);
+            // tmp (old locked data) is dropped here, releasing the previous buffer without copying.
         }
         {
             let mut lock = renderer::QUADTREE.lock();
@@ -393,6 +454,37 @@ fn render(simulation: &mut Simulation, frame: usize) {
             lock.extend_from_slice(&simulation.octree.nodes);
         }
         *lock |= true;
+
+        // If requested, compute a forced camera from published bodies and push it to renderer for debugging.
+        if std::env::var("RENDER_FORCE_CAMERA").is_ok() {
+            let bodies_guard = renderer::BODIES.lock();
+            let sample_count = bodies_guard.len().min(128);
+            if sample_count > 0 {
+                let mut min = Vec3::new(f32::MAX, f32::MAX, f32::MAX);
+                let mut max = Vec3::new(f32::MIN, f32::MIN, f32::MIN);
+                let mut sum = Vec3::zero();
+                for b in bodies_guard.iter().take(sample_count) {
+                    min.x = min.x.min(b.pos.x);
+                    min.y = min.y.min(b.pos.y);
+                    min.z = min.z.min(b.pos.z);
+                    max.x = max.x.max(b.pos.x);
+                    max.y = max.y.max(b.pos.y);
+                    max.z = max.z.max(b.pos.z);
+                    sum += b.pos;
+                }
+                let count_f = sample_count as f32;
+                let mean = sum / count_f;
+                let center = ((min + max) * 0.5 + mean) * 0.5;
+                let mut extent = (max - min).mag();
+                if !extent.is_finite() || extent <= 0.0 { extent = 80.0; }
+                let mut desired_distance = (extent * 1.25).max(600.0);
+                desired_distance = desired_distance.clamp(80.0, 2_500_000.0);
+                *renderer::FORCE_CAMERA_TARGET.lock() = center;
+                *renderer::FORCE_CAMERA_DISTANCE.lock() = desired_distance;
+                renderer::FORCE_CAMERA.store(true, Ordering::Relaxed);
+            }
+        }
+
         // Diagnostic log to confirm publishing into shared renderer buffers
         eprintln!(
             "PUBLISH: frame={} bodies={} quadtree_nodes={}",
@@ -400,6 +492,14 @@ fn render(simulation: &mut Simulation, frame: usize) {
             renderer::BODIES.lock().len(),
             renderer::QUADTREE.lock().len()
         );
+
+        // Optional debug dump of first few published positions to help trace visibility issues
+        if std::env::var("RENDER_DEBUG_LOG_POSITIONS").is_ok() {
+            let bodies_guard = renderer::BODIES.lock();
+            for (i, b) in bodies_guard.iter().take(8).enumerate() {
+                eprintln!("PUBLISH_POS[{}]: {:?}", i, b.pos);
+            }
+        }
     }
 }
 

@@ -1,0 +1,10 @@
+F:\Games\deadlock_fork_elements\target_release_20260927-084510\release\deps\lock_api-680c49c86c2d20e4.d: C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lock_api-0.4.10\src\lib.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lock_api-0.4.10\src\mutex.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lock_api-0.4.10\src\remutex.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lock_api-0.4.10\src\rwlock.rs
+
+F:\Games\deadlock_fork_elements\target_release_20260927-084510\release\deps\liblock_api-680c49c86c2d20e4.rlib: C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lock_api-0.4.10\src\lib.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lock_api-0.4.10\src\mutex.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lock_api-0.4.10\src\remutex.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lock_api-0.4.10\src\rwlock.rs
+
+F:\Games\deadlock_fork_elements\target_release_20260927-084510\release\deps\liblock_api-680c49c86c2d20e4.rmeta: C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lock_api-0.4.10\src\lib.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lock_api-0.4.10\src\mutex.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lock_api-0.4.10\src\remutex.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lock_api-0.4.10\src\rwlock.rs
+
+C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lock_api-0.4.10\src\lib.rs:
+C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lock_api-0.4.10\src\mutex.rs:
+C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lock_api-0.4.10\src\remutex.rs:
+C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lock_api-0.4.10\src\rwlock.rs:

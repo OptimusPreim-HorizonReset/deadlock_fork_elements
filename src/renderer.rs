@@ -30,6 +30,9 @@ pub static COLLISIONS_ENABLED: Lazy<AtomicBool> = Lazy::new(|| true.into());
 pub static RESET_REQUESTED: Lazy<AtomicBool> = Lazy::new(|| false.into());
 pub static CHEMISTRY_COMPASS_COLORING: Lazy<AtomicBool> = Lazy::new(|| false.into());
 
+// Request from other threads to re-run the camera auto-fit on next bodies update
+pub static CAMERA_AUTOFIT_REQUEST: Lazy<AtomicBool> = Lazy::new(|| false.into());
+
 #[derive(Clone, Copy, Debug)]
 pub struct ManualSpawnRequest {
     pub position: Vec3,
@@ -240,8 +243,13 @@ impl quarkstrom::Renderer for Renderer {
                     std::mem::swap(&mut self.quadtree, &mut QUADTREE.lock());
                 }
 
-                // Auto-fit camera to scene extents on first body swap if not already done
-                if !self.camera_autofit_done && !self.bodies.is_empty() {
+                // diagnostic: note bodies swapped in renderer
+                let bodies_count = self.bodies.len();
+
+                // Auto-fit camera to scene extents on first body swap or when requested
+                let cam_request = CAMERA_AUTOFIT_REQUEST.swap(false, Ordering::Relaxed);
+                let mut autofit_applied = false;
+                if ((!self.camera_autofit_done) || cam_request) && bodies_count > 0 {
                     let mut min = Vec3::new(f32::MAX, f32::MAX, f32::MAX);
                     let mut max = Vec3::new(f32::MIN, f32::MIN, f32::MIN);
                     for b in &self.bodies {
@@ -259,7 +267,17 @@ impl quarkstrom::Renderer for Renderer {
                     self.camera_target = center;
                     self.camera_distance = desired_distance;
                     self.camera_autofit_done = true;
+                    autofit_applied = true;
                 }
+
+                eprintln!(
+                    "RENDERER_SWAP: bodies={} quadtree_nodes={} autofit_applied={} camera_target={:?} camera_distance={}",
+                    bodies_count,
+                    self.quadtree.len(),
+                    autofit_applied,
+                    self.camera_target,
+                    self.camera_distance
+                );
             }
             *lock = false;
         }

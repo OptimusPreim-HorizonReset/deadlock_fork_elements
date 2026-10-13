@@ -393,6 +393,13 @@ fn render(simulation: &mut Simulation, frame: usize) {
             lock.extend_from_slice(&simulation.octree.nodes);
         }
         *lock |= true;
+        // Diagnostic log to confirm publishing into shared renderer buffers
+        eprintln!(
+            "PUBLISH: frame={} bodies={} quadtree_nodes={}",
+            frame,
+            renderer::BODIES.lock().len(),
+            renderer::QUADTREE.lock().len()
+        );
     }
 }
 

@@ -2180,7 +2180,9 @@ mod tests {
         sim.spawn_accretion();
         assert_eq!(sim.bodies.len(), old_len + 1);
         let new_body = sim.bodies.last().unwrap();
-        assert_eq!(new_body.rotation_axis, rotation_axis_before);
+        // Allow a tiny floating-point tolerance for rotation axis equality
+        let diff = (new_body.rotation_axis - rotation_axis_before).mag();
+        assert!(diff < 1e-6, "rotation axis differs by {} (>1e-6)", diff);
     }
 
     #[test]

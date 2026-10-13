@@ -38,9 +38,9 @@ n: 2000
 #   Satelliten als typische astronomische Regionen unterscheidbar bleiben.
 
 inner_radius: 2.0
-outer_radius: 100000.0
-central_mass: 10000000.10
-particle_mass_range: 10.000000000066, 250.0000000001
+outer_radius: 10000.0
+central_mass: 100000.10
+particle_mass_range: 1.000000000066, 25.0000000001
 
 # === SPAWN ZONE CONFIGURATION ===
 # outer_ring_spawn_zone_inner_ratio: Innerer Radius der Spawn-Zone (als Verhältnis zu outer_radius)
@@ -131,8 +131,8 @@ gas_temperature_color_scale: 0.9
 # prob_repeated: Wahrscheinlichkeit für periodisch wiederkehrende Begegnungen
 # prob_flyby: Wahrscheinlichkeit für intensive Flybys
 
-galaxy_separation_factor: 5.0
-galaxy_count: 6
+galaxy_separation_factor: 10.0
+galaxy_count: 20
 galaxy_volume_scatter_factor: 2.0
 galaxy_mass_weighted_separation: true
 galaxy_separation_mass_exponent: 0.333
@@ -194,11 +194,11 @@ flyby_speed_factor: 0.90
 #   bei hohen Körperzahlen zu reduzieren.
 
 performance_dynamic_interval_scaling: true
-performance_body_count_threshold: 150000
+performance_body_count_threshold: 400000
 performance_max_interval_scale: 4
 performance_render_body_limit: 400000
 performance_render_sample_ratio: 1.0
-performance_high_count_mode: false
+performance_high_count_mode: true
 performance_disable_adaptive_updates_in_high_count: false
 performance_octree_reserve_factor: 4.0
 
@@ -377,7 +377,7 @@ adaptive_multipole_critical: 3
 adaptive_dynamics_quiet_threshold: 0.001
 adaptive_dynamics_critical_threshold: 0.35
 eta_timestep: 1000.0
-dt_min: 10.0
+dt_min: 1.0
 dt_max: 1000.0
 max_energy_error: 0.5
 
@@ -498,6 +498,30 @@ Direkte Änderungen:
 - `organigram_sample_limit` – Maximale Anzahl an Institutionen, die für die Organigram-Ansicht gesampelt werden. Standard: 200.
 - `organigram_canvas_width` / `organigram_canvas_height` – Pixelgröße des Organigram-Canvas. Standard: 360 x 360.
 
+## Emergenz / Institutionserkennung (institution_emergence_mode: "v1")
+
+- Kurzbeschreibung: `emergence_v1` ist die deterministische Heuristik, die in `src/emergence.rs` implementiert ist. Sie analysiert zwischengespeicherte Galaxie‑Snapshots (siehe `Simulation::cache_galaxies()`), erkennt dichte Gas‑/Struktur‑Regionen und erzeugt für erkannte „Institutionen“ kompakte `Table`‑Objekte.
+
+- Ausgabe / Nebeneffekte:
+  - `emergence_v1` gibt `Vec<Table>` zurück. Jede `Table` enthält `id`, `accounts` (mass, momentum, angular_momentum), `capacity` (FlowCapacity), `constitution`, optionale `position` und eine `timescale` (Update-Intervall in Frames).
+  - Die von `recompute_institutions()` erzeugten/aktualisierten Tabellen werden in der globalen Registry `TABLES` (siehe `src/tables.rs`) abgelegt: `static TABLES: Lazy<Mutex<Vec<Table>>>`.
+  - `recompute_institutions()` führt Upsert/Prune‑Logik aus: vorhandene Tables werden aktualisiert, veraltete Einträge werden entfernt.
+
+- Aktivierung / Timing:
+  - Die Emergenz‑Passage wird nur ausgeführt, wenn `enable_flow_dynamics_model = true` und der `TimescaleScheduler` die konfigurierbare Periode `institution_recompute_interval` (Config‑Schlüssel, Default: 500) auslöst. Die Aufrufstelle ist `Simulation::step()` → `cache_galaxies()` → `recompute_institutions()`.
+  - Wegen möglicher Laufzeitkosten ist die Emergenz durch den TimescaleScheduler und adaptive Interval-Skalierung gedrosselt (siehe `TimescaleScheduler` in `src/timescales.rs` und die `performance_*` Konfigurationsparameter).
+
+- Verhalten und Eigenschaften:
+  - Deterministisch: `v1` ist als deterministische Heuristik konzipiert (bei gleichen Eingabedaten/Seed wiederholbar).
+  - Sichtbarkeit: Die erzeugten Tables werden von Renderer/Organigram/Flow-Visualisierung genutzt (z. B. `organigram_sample_limit`, `flowfield_*` Optionen).
+  - Performance: Für große Körperzahlen kann die Emergenz spürbar teuer werden; die Simulation skaliert Intervall/Ausführungsfrequenz adaptiv.
+
+- Test- und Wartungsnotizen:
+  - Einige Hilfsfunktionen in `src/emergence.rs` oder nahegelegene Module können als "never used" erscheinen, wenn `enable_flow_dynamics_model` standardmäßig `false` ist. Das ist erwartetes Verhalten für feature‑gedrosselte Hilfsroutinen.
+  - Tests, die mit Emergenz interagieren, müssen globale Zustände (insbesondere `tables::TABLES`) säubern oder deterministisch initialisieren, um Interferenzen unter parallelem Testlauf zu vermeiden (siehe aktualisierter Test‑Hygiene in `src/simulation.rs`).
+
+- Empfehlungen / Entscheidungen:
+  - Wenn Emergenz in Standardläufen verwendet werden soll:    - Setze `enable_flow_dynamics_model = true` und `institution_emergence_mode: "v1"` in der Konfiguration.    - Füge einen Integrationstest hinzu, der `recompute_institutions()` aufruft und überprüft, dass `TABLES` neue Einträge erhält.    - Überwache die Performance und erhöhe ggf. `institution_recompute_interval` oder aktiviere adaptive Interval‑Skalierung.  - Wenn Emergenz bewusst dorman sein soll:    - Dokumentiere das Verhalten (dieser Abschnitt) und annotiere nicht‑genutzte Helper mit klaren Kommentaren / `#[allow(dead_code)]` oder siehe Feature‑Gates.    - Schlage vor, Hilfsfunktionen bei Refactoring zu entfernen oder in ein explizites Feature‑modul zu verschieben.  - Für CI: bis Emergenz‑Workflows stabil sind, sicherstellen, dass Tests globalen Zustand reinigen oder CI mit `RUST_TEST_THREADS=1` laufen lassen (kurzfristiger Workaround).
 Direkte Änderungen:
 
 - `src/renderer.rs`

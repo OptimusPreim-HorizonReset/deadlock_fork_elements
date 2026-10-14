@@ -1,0 +1,106 @@
+   Compiling barnes-hut v0.1.0 (F:\Games\deadlock_fork_elements)
+warning: method `recompute_institutions` is never used
+   --> src\simulation.rs:164:8
+    |
+ 43 | impl Simulation {
+    | --------------- method in this implementation
+...
+164 |     fn recompute_institutions(&mut self) {
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `barnes-hut` (bin "barnes-hut" test) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.19s
+     Running unittests src\main.rs (target\debug\deps\barnes_hut-358cb1eebfeae459.exe)
+
+running 73 tests
+test accounts::tests::conservative_transfer_preserves_totals_when_within_capacity ... ok
+test accounts::tests::scalar_transfer_is_clamped_by_capacity_and_availability ... ok
+test accounts::tests::vector_momentum_transfer_respects_direction_and_capacity ... ok
+test config::tests::atomic_number_lists_accept_empty_and_valid_lists ... ok
+test config::tests::explicit_mode_setting_takes_precedence_over_legacy_alias ... ok
+test contact_parliament::tests::negotiation_preserves_total_angular_momentum ... ok
+test elements::tests::catalog_contains_all_118_ordered_elements ... ok
+test elements::tests::chemistry_families_match_documented_extremes ... ok
+test elements::tests::element_colors_are_finite_and_bounded ... ok
+test elements::tests::missing_electronegativities_are_explicitly_estimated ... ok
+test elements::tests::reactivity_extremes_and_binding_classes_are_bounded ... ok
+test elements::tests::scientific_gravity_is_hydrogen_normalized_and_orders_heavy_elements ... ok
+test emergence::tests::emergence_v1_creates_table_when_threshold_exceeded ... ok
+test emergence::tests::emergence_v1_no_table_when_below_threshold ... ok
+test emergence::tests::emergence_v1_registers_table_in_registry_when_enabled ... ok
+test galaxy::tests::galaxy_aggregates_mass_and_momentum ... ok
+test galaxy_tree::tests::galaxy_tree_inserts_and_accumulates_mass ... ok
+test gas::tests::alpha_layers_are_bounded_and_outer_to_inner_ordered ... ok
+test gas::tests::invalid_gas_visual_inputs_are_sanitized ... ok
+test history::tests::history_records_and_stability ... ok
+test id_alloc::tests::ids_increment_and_are_unique ... ok
+test molecules::tests::compound_identification_is_order_independent ... ok
+test molecules::tests::compound_library_includes_documented_organic_and_mineral_examples ... ok
+test molecules::tests::unknown_valid_compositions_keep_a_deterministic_formula ... ok
+test render_mode::tests::render_mode_variants_match_expected_order ... ok
+test roles::tests::default_is_reservoir ... ok
+test roles::tests::normalize_works ... ok
+test scientific_validation::performance_body_memory_stays_within_repository_budget ... ok
+test scientific_validation::performance_four_x_particle_scaling_stays_below_twelve_x_runtime ... ignored, hardware scaling timing is opt-in
+test scientific_validation::performance_octree_node_growth_remains_linear ... ok
+test scientific_validation::performance_optional_4096_body_timing_stays_within_calibrated_budget ... ignored, hardware timing requires a calibrated target-machine budget
+test scientific_validation::physics_angular_momentum_drift_stays_below_reference_tolerance ... ok
+test scientific_validation::physics_center_merge_conserves_mass_and_linear_momentum ... ok
+test scientific_validation::physics_center_of_mass_remains_stationary ... ok
+test scientific_validation::physics_default_softened_binary_remains_bounded ... ok
+test scientific_validation::physics_disk_equilibrium_uses_runtime_plummer_law ... ok
+test scientific_validation::physics_elemental_mass_remapping_recomputes_circular_velocities ... ok
+test scientific_validation::physics_inclined_generation_uses_projected_orbital_radius ... ok
+test scientific_validation::physics_linear_momentum_is_conserved_in_an_isolated_binary ... ok
+test scientific_validation::physics_production_steps_conserve_mass_without_collisions ... ok
+test scientific_validation::physics_symplectic_energy_drift_remains_bounded ... ok
+test scientific_validation::property_barnes_hut_rms_force_error_is_below_five_percent ... ok
+test scientific_validation::property_bond_forces_are_restricted_to_bonded_bodies ... ok
+test scientific_validation::property_bounded_inputs_never_produce_nan_or_infinity ... ok
+test scientific_validation::property_element_gravity_does_not_create_self_pressure ... ok
+test scientific_validation::property_exact_tree_traversal_matches_direct_summation ... ok
+test scientific_validation::property_gravity_is_rotation_covariant ... ok
+test scientific_validation::property_gravity_is_translation_invariant ... ok
+test scientific_validation::property_mixed_precision_force_orders_stay_below_eight_percent ... ok
+test scientific_validation::property_pair_forces_obey_newtons_third_law ... ok
+test scientific_validation::property_simulation_attract_force_error_stays_below_eight_percent ... ok
+test scientific_validation::regression_equal_mass_binary_remains_on_a_bounded_circular_orbit ... ok
+test scientific_validation::regression_softened_force_matches_independent_snapshot ... ok
+test scientific_validation::shader_cpu_gas_billboard_alpha_layers_are_bounded_and_ordered ... ok
+test scientific_validation::shader_optional_glsl_artifact_parses_and_validates_with_naga ... ok
+test scientific_validation::unit_body_integration_remains_semi_implicit_euler ... ok
+test scientific_validation::unit_octree_mass_and_center_of_mass_are_exact ... ok
+test scientific_validation::unit_plummer_softened_gravity_matches_analytic_reference ... ok
+test scientific_validation::unit_unsoftened_gravity_follows_inverse_square_law ... ok
+test scientific_validation::unit_zero_distance_self_force_is_finite_and_zero ... ok
+test scientific_validation::validation_accounts_conservative_transfer_preserves_totals ... ok
+test simulation::tests::galactic_atom_mode_respects_selected_elements_and_body_budget ... ok
+test simulation::tests::manual_element_spawn_preserves_selection_and_gets_a_stable_id ... ok
+test simulation::tests::molecular_spring_force_conserves_pair_momentum_and_breaks_at_threshold ... ok
+test simulation::tests::molecule_composition_resolves_known_compounds ... ok
+test simulation::tests::paired_galaxy_default_remains_unlabelled ... ok
+test simulation::tests::roles_default_to_reservoir_when_no_triggers ... FAILED
+test simulation::tests::roles_update_normalizes_and_applies_small_acceleration ... ok
+test simulation::tests::unlike_element_collision_forms_a_persistent_bond ... ok
+test tables::tests::delegate_reflects_accounts ... ok
+test tables::tests::transfer_between_tables_uses_capacity ... ok
+test timescales::tests::default_intervals_are_reasonable ... ok
+test timescales::tests::scheduler_ticks_as_expected ... ok
+
+failures:
+
+---- simulation::tests::roles_default_to_reservoir_when_no_triggers stdout ----
+
+thread 'simulation::tests::roles_default_to_reservoir_when_no_triggers' (17280) panicked at src\simulation.rs:1633:9:
+reservoir should dominate when no triggers
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    simulation::tests::roles_default_to_reservoir_when_no_triggers
+
+test result: FAILED. 70 passed; 1 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+error: test failed, to rerun pass `--bin barnes-hut`

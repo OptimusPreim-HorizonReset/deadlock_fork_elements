@@ -1,0 +1,10 @@
+F:\Games\deadlock_fork_elements\target_release_20260927-085313\release\deps\arboard-46b5afb350f519b3.d: C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.4.0\src\lib.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.4.0\src\common.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.4.0\src\platform\mod.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.4.0\src\platform\windows.rs
+
+F:\Games\deadlock_fork_elements\target_release_20260927-085313\release\deps\libarboard-46b5afb350f519b3.rlib: C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.4.0\src\lib.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.4.0\src\common.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.4.0\src\platform\mod.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.4.0\src\platform\windows.rs
+
+F:\Games\deadlock_fork_elements\target_release_20260927-085313\release\deps\libarboard-46b5afb350f519b3.rmeta: C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.4.0\src\lib.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.4.0\src\common.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.4.0\src\platform\mod.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.4.0\src\platform\windows.rs
+
+C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.4.0\src\lib.rs:
+C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.4.0\src\common.rs:
+C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.4.0\src\platform\mod.rs:
+C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.4.0\src\platform\windows.rs:

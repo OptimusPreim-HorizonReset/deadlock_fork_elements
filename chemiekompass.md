@@ -204,7 +204,7 @@ initialisiert:
 
 ### 7. Identitaetsgarantie im Element-Galaxy-Pair-Modus
 
-Bei aktivem `enable_elemental_galaxy_pair_mode` und `n > 1000` werden initiale
+Bei aktivem `enable_elemental_galaxy_pair_mode` und `n > 200` werden initiale
 Scheibenkoerper, Scheibengas, Volumengas, Akretionsspawns, manuell gesetzte Bodies
 und Gas-Zuendungsprodukte ueber eines der 118 Templates erzeugt. Kein solcher
 Folgepfad darf die Ordnungszahl auf 0 zuruecksetzen.

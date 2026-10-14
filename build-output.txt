@@ -1,0 +1,185 @@
+   Compiling proc-macro2 v1.0.86
+   Compiling unicode-ident v1.0.9
+   Compiling cfg-if v1.0.0
+   Compiling autocfg v1.1.0
+   Compiling winapi v0.3.9
+   Compiling version_check v0.9.4
+   Compiling windows_x86_64_msvc v0.48.0
+   Compiling once_cell v1.20.1
+   Compiling bitflags v1.3.2
+   Compiling log v0.4.19
+   Compiling windows_x86_64_msvc v0.42.2
+   Compiling lock_api v0.4.10
+   Compiling windows-targets v0.48.0
+   Compiling parking_lot_core v0.9.8
+   Compiling ahash v0.7.6
+   Compiling quote v1.0.37
+   Compiling syn v2.0.77
+   Compiling windows-targets v0.42.2
+   Compiling num-traits v0.2.19
+   Compiling smallvec v1.10.0
+   Compiling scopeguard v1.1.0
+   Compiling getrandom v0.2.10
+   Compiling shlex v1.3.0
+   Compiling thiserror v1.0.63
+   Compiling parking_lot v0.12.3
+   Compiling cc v1.1.15
+   Compiling libc v0.2.158
+   Compiling hashbrown v0.12.3
+   Compiling indexmap v1.9.3
+   Compiling raw-window-handle v0.5.2
+   Compiling com-rs v0.2.1
+   Compiling crossbeam-utils v0.8.21
+   Compiling windows-sys v0.48.0
+   Compiling ahash v0.8.11
+   Compiling backtrace v0.3.73
+   Compiling unicode-width v0.1.10
+   Compiling rustc-hash v1.1.0
+   Compiling rustc-demangle v0.1.24
+   Compiling tinyvec_macros v0.1.1
+   Compiling bit-vec v0.6.3
+   Compiling winapi-util v0.1.5
+   Compiling libloading v0.7.4
+   Compiling termcolor v1.4.1
+   Compiling khronos-egl v4.1.0
+   Compiling ash v0.37.3+1.3.251
+   Compiling ttf-parser v0.19.1
+   Compiling codespan-reporting v0.11.1
+   Compiling bit-set v0.5.3
+   Compiling tinyvec v1.6.0
+   Compiling bytemuck_derive v1.4.1
+   Compiling thiserror-impl v1.0.63
+   Compiling bytemuck v1.17.1
+   Compiling spirv v0.2.0+1.5.4
+   Compiling windows v0.44.0
+   Compiling owned_ttf_parser v0.19.0
+   Compiling gpu-descriptor-types v0.1.1
+   Compiling gpu-alloc-types v0.2.0
+   Compiling ab_glyph_rasterizer v0.1.8
+   Compiling hexf-parse v0.2.1
+   Compiling bitflags v2.13.0
+   Compiling unicode-xid v0.2.4
+   Compiling cfg_aliases v0.1.1
+   Compiling zerocopy v0.7.35
+   Compiling widestring v1.0.2
+   Compiling wgpu-types v0.16.1
+   Compiling winit v0.28.7
+   Compiling naga v0.12.3
+   Compiling ab_glyph v0.2.21
+   Compiling hassle-rs v0.10.0
+   Compiling gpu-alloc v0.5.4
+   Compiling gpu-descriptor v0.2.3
+   Compiling ecolor v0.22.0
+   Compiling emath v0.22.0
+   Compiling unicode-normalization v0.1.22
+   Compiling d3d12 v0.6.0
+   Compiling gpu-allocator v0.22.0
+   Compiling libloading v0.8.0
+   Compiling range-alloc v0.1.3
+   Compiling unicode-bidi v0.3.13
+   Compiling siphasher v0.3.11
+   Compiling renderdoc-sys v1.1.0
+   Compiling nohash-hasher v0.2.0
+   Compiling percent-encoding v2.3.0
+   Compiling profiling v1.0.8
+   Compiling rand_core v0.6.4
+   Compiling glow v0.12.3
+   Compiling arrayvec v0.7.4
+   Compiling rand v0.8.5
+   Compiling form_urlencoded v1.2.0
+   Compiling epaint v0.22.0
+   Compiling idna v0.4.0
+   Compiling phf_shared v0.11.2
+   Compiling windows-sys v0.45.0
+   Compiling instant v0.1.13
+   Compiling error-code v3.2.0
+   Compiling futures-core v0.3.28
+   Compiling clipboard-win v5.4.0
+   Compiling phf_generator v0.11.2
+   Compiling url v2.4.0
+   Compiling crossbeam-epoch v0.9.18
+   Compiling safe_arch v0.7.0
+   Compiling wgpu-hal v0.16.2
+   Compiling rayon-core v1.13.0
+   Compiling static_assertions v1.1.0
+   Compiling wide v0.7.10
+   Compiling webbrowser v0.8.10
+   Compiling crossbeam-deque v0.8.6
+   Compiling wgpu-core v0.16.1
+   Compiling phf_macros v0.11.2
+   Compiling arboard v3.4.0
+   Compiling egui v0.22.0
+   Compiling same-file v1.0.6
+   Compiling type-map v0.5.0
+   Compiling by_address v1.2.1
+   Compiling palette v0.7.6
+   Compiling palette_derive v0.7.6
+   Compiling walkdir v2.3.3
+   Compiling futures-intrusive v0.5.0
+   Compiling phf v0.11.2
+   Compiling ultraviolet v0.9.2
+   Compiling wgpu v0.16.3
+   Compiling egui-winit v0.22.0
+   Compiling winit_input_helper v0.14.1
+   Compiling egui-wgpu v0.22.0
+   Compiling crossbeam-channel v0.5.15
+   Compiling approx v0.5.1
+   Compiling filetime v0.2.29
+   Compiling fastrand v2.1.1
+   Compiling arc-swap v1.7.1
+   Compiling either v1.16.0
+   Compiling fast-srgb8 v1.0.0
+   Compiling pollster v0.3.0
+   Compiling rayon v1.12.0
+   Compiling quarkstrom v0.1.0 (https://github.com/DeadlockCode/quarkstrom?rev=8aa27dba1739f09b4d1372faa8553e64a3f0549d#8aa27dba)
+   Compiling notify v6.1.1
+   Compiling barnes-hut v0.1.0 (F:\Games\deadlock_fork_elements)
+warning: function `set_counter` is never used
+  --> src\id_alloc.rs:14:8
+   |
+14 | pub fn set_counter(v: u64) {
+   |        ^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `CompoundDefinition` is never constructed
+  --> src\molecules.rs:14:12
+   |
+14 | pub struct CompoundDefinition {
+   |            ^^^^^^^^^^^^^^^^^^
+
+warning: constant `KNOWN_COMPOUNDS` is never used
+  --> src\molecules.rs:20:11
+   |
+20 | pub const KNOWN_COMPOUNDS: &[CompoundDefinition] = &[
+   |           ^^^^^^^^^^^^^^^
+
+warning: function `identify_compound` is never used
+   --> src\molecules.rs:153:8
+    |
+153 | pub fn identify_compound(composition: &[(u8, u16)]) -> Option<&'static CompoundDefinition> {
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: function `empirical_formula` is never used
+   --> src\molecules.rs:160:8
+    |
+160 | pub fn empirical_formula(composition: &[(u8, u16)]) -> Option<String> {
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: function `normalize_composition` is never used
+   --> src\molecules.rs:173:4
+    |
+173 | fn normalize_composition(composition: &[(u8, u16)]) -> Option<Vec<(u8, u16)>> {
+    |    ^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `identified_compound` is never used
+   --> src\simulation.rs:749:12
+    |
+ 43 | impl Simulation {
+    | --------------- method in this implementation
+...
+749 |     pub fn identified_compound(
+    |            ^^^^^^^^^^^^^^^^^^^
+
+warning: `barnes-hut` (bin "barnes-hut") generated 7 warnings
+    Finished `release` profile [optimized] target(s) in 1m 35s

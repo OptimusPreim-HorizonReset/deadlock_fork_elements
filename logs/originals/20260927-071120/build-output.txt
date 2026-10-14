@@ -1,0 +1,5 @@
+   Compiling barnes-hut v0.1.0 (F:\Games\deadlock_fork_elements)
+error: failed to remove file `F:\Games\deadlock_fork_elements\target\release\barnes-hut.exe`
+
+Caused by:
+  Access is denied. (os error 5)

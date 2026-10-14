@@ -1,0 +1,85 @@
+   Compiling barnes-hut v0.1.0 (F:\Games\deadlock_fork_elements)
+error[E0592]: duplicate definitions with name `cache_galaxies`
+    --> src\simulation.rs:696:5
+     |
+ 696 |     fn cache_galaxies(&mut self) {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ duplicate definitions for `cache_galaxies`
+...
+1437 |     fn cache_galaxies(&mut self) {
+     |     ---------------------------- other definition for `cache_galaxies`
+
+error[E0592]: duplicate definitions with name `recompute_institutions`
+    --> src\simulation.rs:718:5
+     |
+ 718 |     fn recompute_institutions(&mut self) {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ duplicate definitions for `recompute_institutions`
+...
+1465 |     fn recompute_institutions(&mut self) {
+     |     ------------------------------------ other definition for `recompute_institutions`
+
+error[E0034]: multiple applicable items in scope
+    --> src\simulation.rs:132:13
+     |
+ 132 |         sim.cache_galaxies();
+     |             ^^^^^^^^^^^^^^ multiple `cache_galaxies` found
+     |
+note: candidate #1 is defined in an impl for the type `Simulation`
+    --> src\simulation.rs:696:5
+     |
+ 696 |     fn cache_galaxies(&mut self) {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: candidate #2 is defined in an impl for the type `Simulation`
+    --> src\simulation.rs:1437:5
+     |
+1437 |     fn cache_galaxies(&mut self) {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0308]: mismatched types
+   --> src\simulation.rs:161:10
+    |
+155 |     fn new_galactic_atom_simulation(
+    |        ---------------------------- implicitly returns `()` as its body has no tail or `return` expression
+...
+161 |     ) -> Self {
+    |          ^^^^ expected `Simulation`, found `()`
+...
+278 |         };
+    |          - help: remove this semicolon to return this value
+
+error[E0034]: multiple applicable items in scope
+    --> src\simulation.rs:865:22
+     |
+ 865 |                 self.cache_galaxies();
+     |                      ^^^^^^^^^^^^^^ multiple `cache_galaxies` found
+     |
+note: candidate #1 is defined in an impl for the type `Simulation`
+    --> src\simulation.rs:696:5
+     |
+ 696 |     fn cache_galaxies(&mut self) {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: candidate #2 is defined in an impl for the type `Simulation`
+    --> src\simulation.rs:1437:5
+     |
+1437 |     fn cache_galaxies(&mut self) {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0034]: multiple applicable items in scope
+    --> src\simulation.rs:866:22
+     |
+ 866 |                 self.recompute_institutions();
+     |                      ^^^^^^^^^^^^^^^^^^^^^^ multiple `recompute_institutions` found
+     |
+note: candidate #1 is defined in an impl for the type `Simulation`
+    --> src\simulation.rs:718:5
+     |
+ 718 |     fn recompute_institutions(&mut self) {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: candidate #2 is defined in an impl for the type `Simulation`
+    --> src\simulation.rs:1465:5
+     |
+1465 |     fn recompute_institutions(&mut self) {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Some errors have detailed explanations: E0034, E0308, E0592.
+For more information about an error, try `rustc --explain E0034`.
+error: could not compile `barnes-hut` (bin "barnes-hut") due to 6 previous errors

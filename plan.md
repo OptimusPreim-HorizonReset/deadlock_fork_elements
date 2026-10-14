@@ -1,3 +1,16 @@
+# GPDM: Flow-Dynamics Migration Plan (live update)
+
+Status snapshot (2026-09-27T01:21:35+02:00):
+- Feature `enable_flow_dynamics_model` set to true in `informations.md`.
+- Emergence rule set to deterministic `v1` (institution_emergence_mode = v1).
+- GPDM scaffolding implemented for M0..M9; next items created as SQL todos in session DB.
+
+Immediate next items (for implementing agent):
+- m10-multipole-aggregation — multipole aggregation in Octree/GalaxyTree (initial multipole fields + propagation implemented; unit tests green)
+- m11-renderer-overlays — FlowField + InstitutionGraph + AccountLedger overlays (scaffolding added: RenderMode wired into Renderer; overlay draw logic pending)
+- m12-delegate-organigram — delegate organigram and LOD in renderer
+- m13-cutover-pr — branch/PR with CI gates
+
 # Plan: Chemiekompass-gestützte Element-Template-Verfeinerung
 
 ## Ziel

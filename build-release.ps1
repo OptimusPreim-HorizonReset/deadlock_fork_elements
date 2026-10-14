@@ -19,3 +19,27 @@ if (-not $cargo) {
 Set-Location $scriptDir
 Write-Host "Benutze Cargo: $cargo"
 & $cargo build --release
+if ($LASTEXITCODE -ne 0) {
+    Write-Host 'Build fehlgeschlagen - target\release\barnes-hut.exe wurde NICHT aktualisiert.' -ForegroundColor Red
+    exit $LASTEXITCODE
+}
+
+$exe = Join-Path $scriptDir 'target\release\barnes-hut.exe'
+Write-Host "Frisch gebaut: $exe"
+
+$infoSrc = Join-Path $scriptDir 'informations.md'
+$infoDst = Join-Path $scriptDir 'target\release\informations.md'
+if (Test-Path $infoSrc) {
+    try {
+        Copy-Item -Path $infoSrc -Destination $infoDst -Force
+        Write-Host "Copied informations.md -> $infoDst"
+    } catch {
+        Write-Host "Fehler beim Kopieren von informations.md: $_" -ForegroundColor Red
+    }
+} else {
+    Write-Host "informations.md nicht gefunden in $scriptDir; Datei wird nicht kopiert." -ForegroundColor Yellow
+}
+
+Write-Host 'Starte diese Datei mit run-release.ps1 oder start-release.bat, um die aktuelle Version auszufuehren.'
+Write-Host 'Hinweis: Alte Ordner wie target_release_* enthalten veraltete Snapshot-Builds - nicht von dort starten.'
+

@@ -1,0 +1,9 @@
+F:\Games\deadlock_fork_elements\target_release_20260927-084510\release\deps\winit_input_helper-c42d3a237bd32bb0.d: C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winit_input_helper-0.14.1\src\lib.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winit_input_helper-0.14.1\src\current_input.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winit_input_helper-0.14.1\src\winit_input_helper.rs
+
+F:\Games\deadlock_fork_elements\target_release_20260927-084510\release\deps\libwinit_input_helper-c42d3a237bd32bb0.rlib: C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winit_input_helper-0.14.1\src\lib.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winit_input_helper-0.14.1\src\current_input.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winit_input_helper-0.14.1\src\winit_input_helper.rs
+
+F:\Games\deadlock_fork_elements\target_release_20260927-084510\release\deps\libwinit_input_helper-c42d3a237bd32bb0.rmeta: C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winit_input_helper-0.14.1\src\lib.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winit_input_helper-0.14.1\src\current_input.rs C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winit_input_helper-0.14.1\src\winit_input_helper.rs
+
+C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winit_input_helper-0.14.1\src\lib.rs:
+C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winit_input_helper-0.14.1\src\current_input.rs:
+C:\Users\Soliak\ 2.\ PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winit_input_helper-0.14.1\src\winit_input_helper.rs:

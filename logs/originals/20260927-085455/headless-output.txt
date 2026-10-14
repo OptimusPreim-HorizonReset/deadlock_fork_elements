@@ -1,0 +1,68 @@
+   Compiling barnes-hut v0.1.0 (F:\Games\deadlock_fork_elements)
+warning: function `set_counter` is never used
+  --> src\id_alloc.rs:14:8
+   |
+14 | pub fn set_counter(v: u64) {
+   |        ^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `CompoundDefinition` is never constructed
+  --> src\molecules.rs:14:12
+   |
+14 | pub struct CompoundDefinition {
+   |            ^^^^^^^^^^^^^^^^^^
+
+warning: constant `KNOWN_COMPOUNDS` is never used
+  --> src\molecules.rs:20:11
+   |
+20 | pub const KNOWN_COMPOUNDS: &[CompoundDefinition] = &[
+   |           ^^^^^^^^^^^^^^^
+
+warning: function `identify_compound` is never used
+   --> src\molecules.rs:153:8
+    |
+153 | pub fn identify_compound(composition: &[(u8, u16)]) -> Option<&'static CompoundDefinition> {
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: function `empirical_formula` is never used
+   --> src\molecules.rs:160:8
+    |
+160 | pub fn empirical_formula(composition: &[(u8, u16)]) -> Option<String> {
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: function `normalize_composition` is never used
+   --> src\molecules.rs:173:4
+    |
+173 | fn normalize_composition(composition: &[(u8, u16)]) -> Option<Vec<(u8, u16)>> {
+    |    ^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `identified_compound` is never used
+   --> src\simulation.rs:749:12
+    |
+ 43 | impl Simulation {
+    | --------------- method in this implementation
+...
+749 |     pub fn identified_compound(
+    |            ^^^^^^^^^^^^^^^^^^^
+
+warning: `barnes-hut` (bin "barnes-hut") generated 7 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.25s
+     Running `target\debug\barnes-hut.exe --headless-test`
+Γ£ô Config geladen: informations.md
+Headless particle movement test (2 galaxies, 20 particles each): 42 bodies
+≡ƒîî Spiral: dist=7199998.00, grav=0.00, dissipation=0.00
+ step  1: total displacement = 178.026657
+≡ƒîî Spiral: dist=7199994.00, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=7199990.00, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=7199986.00, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=7199982.00, grav=0.00, dissipation=0.00
+≡ƒº¡ Role update executed at frame 9
+≡ƒîî Spiral: dist=7199978.00, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=7199974.00, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=7199970.00, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=7199966.00, grav=0.00, dissipation=0.00
+≡ƒîî Spiral: dist=7199962.00, grav=0.00, dissipation=0.00
+≡ƒº¡ Role update executed at frame 19
+ step 20: total displacement = 3560.407959
+Particle movement verification: 42 / 42 moved

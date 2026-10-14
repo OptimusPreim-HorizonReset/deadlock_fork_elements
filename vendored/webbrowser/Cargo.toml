@@ -1,0 +1,10 @@
+[package]
+name = "webbrowser"
+version = "0.8.10"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Stub webbrowser crate used to disable opening external browsers in release builds."
+
+[lib]
+name = "webbrowser"
+path = "src/lib.rs"

@@ -1,0 +1,11 @@
+F:\Games\deadlock_fork_elements\target_release_20260927-084510\release\deps\quarkstrom-e7b58942e0999333.d: C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\lib.rs C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\gui.rs C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\circle_shader.wgsl C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\line_shader.wgsl C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\rect_shader.wgsl
+
+F:\Games\deadlock_fork_elements\target_release_20260927-084510\release\deps\libquarkstrom-e7b58942e0999333.rlib: C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\lib.rs C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\gui.rs C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\circle_shader.wgsl C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\line_shader.wgsl C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\rect_shader.wgsl
+
+F:\Games\deadlock_fork_elements\target_release_20260927-084510\release\deps\libquarkstrom-e7b58942e0999333.rmeta: C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\lib.rs C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\gui.rs C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\circle_shader.wgsl C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\line_shader.wgsl C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\rect_shader.wgsl
+
+C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\lib.rs:
+C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\gui.rs:
+C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\circle_shader.wgsl:
+C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\line_shader.wgsl:
+C:\Users\Soliak\ 2.\ PC\.cargo\git\checkouts\quarkstrom-1c4cbc5bf34c95f2\8aa27db\src\rect_shader.wgsl:

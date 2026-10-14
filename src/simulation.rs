@@ -134,8 +134,8 @@ impl Simulation {
 
         // Distribute pairs among clusters as evenly as possible.
         let mut pairs_per_cluster = vec![pair_count / cluster_count; cluster_count];
-        for i in 0..(pair_count % cluster_count) {
-            pairs_per_cluster[i] += 1;
+        for p in pairs_per_cluster.iter_mut().take(pair_count % cluster_count) {
+            *p += 1;
         }
         let mut assigned_in_cluster = vec![0usize; cluster_count];
 
@@ -147,7 +147,7 @@ impl Simulation {
         // Reserve one slot per galaxy for the central mass; the remaining budget is available for disk particles.
         // If total_body_budget == 0 then no budget constraint is applied.
         let (mut remaining_disk_budget, mut remaining_galaxy_slots): (isize, usize) = if config.total_body_budget > 0 {
-            let reserved_centers = total_galaxies as usize;
+            let reserved_centers = total_galaxies;
             let available = config.total_body_budget.saturating_sub(reserved_centers);
             (available as isize, total_galaxies)
         } else {
@@ -411,7 +411,7 @@ impl Simulation {
         }
 
         // Ensure we have sensible center indices for legacy code paths.
-        let center1_idx = *galaxy_start_indices.get(0).unwrap_or(&0);
+        let center1_idx = *galaxy_start_indices.first().unwrap_or(&0);
         let center2_idx = *galaxy_start_indices.get(1).unwrap_or(&usize::MAX);
         let next_body_id = Self::assign_body_ids(&mut bodies, 1);
         let mut sim = Self {
@@ -1388,7 +1388,7 @@ impl Simulation {
         } else {
             // Octree was built earlier in this frame; check whether the root oct differs enough
             // to require a rebuild. If it does, rebuild; otherwise reuse the existing tree.
-            if let Some(root) = self.octree.nodes.get(0) {
+            if let Some(root) = self.octree.nodes.first() {
                 let center_diff = (root.oct.center - oct.center).mag();
                 let size_diff = (root.oct.size - oct.size).abs();
                 if center_diff > 1e-3 || size_diff > 1e-3 {
@@ -1527,7 +1527,7 @@ impl Simulation {
         // timescale tick
         let t = Instant::now();
         self.timescale_scheduler.tick();
-        comps.push(("timescale_tick".to_string(), t.elapsed().as_micros() as u128));
+        comps.push(("timescale_tick".to_string(), t.elapsed().as_micros()));
 
         // Role updates (M1)
         if self
@@ -1537,7 +1537,7 @@ impl Simulation {
             if self.config.enable_flow_dynamics_model {
                 let t = Instant::now();
                 self.update_roles();
-                comps.push(("update_roles".to_string(), t.elapsed().as_micros() as u128));
+                comps.push(("update_roles".to_string(), t.elapsed().as_micros()));
                 eprintln!("🧭 Role update executed at frame {}", self.frame);
             }
         }
@@ -1545,12 +1545,12 @@ impl Simulation {
         // manual spawns
         let t = Instant::now();
         self.process_manual_spawns();
-        comps.push(("process_manual_spawns".to_string(), t.elapsed().as_micros() as u128));
+        comps.push(("process_manual_spawns".to_string(), t.elapsed().as_micros()));
 
         // iterate (body updates)
         let t = Instant::now();
         self.iterate();
-        comps.push(("iterate".to_string(), t.elapsed().as_micros() as u128));
+        comps.push(("iterate".to_string(), t.elapsed().as_micros()));
 
         // Adaptive interval scaling (copy from step)
         let mut interval_scale = 1.0_f32;
@@ -1568,7 +1568,7 @@ impl Simulation {
             if renderer::COLLISIONS_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
                 let t = Instant::now();
                 self.collide();
-                comps.push(("collide".to_string(), t.elapsed().as_micros() as u128));
+                comps.push(("collide".to_string(), t.elapsed().as_micros()));
             }
         }
 
@@ -1577,24 +1577,24 @@ impl Simulation {
         if self.frame % attract_interval == 0 {
             let t = Instant::now();
             self.attract();
-            comps.push(("attract_octree_build".to_string(), t.elapsed().as_micros() as u128));
+            comps.push(("attract_octree_build".to_string(), t.elapsed().as_micros()));
 
             let t = Instant::now();
             self.apply_center_spacetime_dilation();
-            comps.push(("apply_center_spacetime_dilation".to_string(), t.elapsed().as_micros() as u128));
+            comps.push(("apply_center_spacetime_dilation".to_string(), t.elapsed().as_micros()));
         }
 
         // spawn/accretion
         if renderer::SPAWN_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
             let t = Instant::now();
             self.spawn_accretion();
-            comps.push(("spawn_accretion".to_string(), t.elapsed().as_micros() as u128));
+            comps.push(("spawn_accretion".to_string(), t.elapsed().as_micros()));
         }
 
         if self.config.enable_flow_dynamics_model {
             let t = Instant::now();
             self.process_gas_collapse_and_spawn();
-            comps.push(("process_gas_collapse_and_spawn".to_string(), t.elapsed().as_micros() as u128));
+            comps.push(("process_gas_collapse_and_spawn".to_string(), t.elapsed().as_micros()));
         }
 
         // Periodically compute emergence heuristics
@@ -1606,23 +1606,23 @@ impl Simulation {
                 let t = Instant::now();
                 self.cache_galaxies();
                 self.recompute_institutions();
-                comps.push(("recompute_institutions".to_string(), t.elapsed().as_micros() as u128));
+                comps.push(("recompute_institutions".to_string(), t.elapsed().as_micros()));
             }
         }
 
         let t = Instant::now();
         self.apply_cluster_motion();
-        comps.push(("apply_cluster_motion".to_string(), t.elapsed().as_micros() as u128));
+        comps.push(("apply_cluster_motion".to_string(), t.elapsed().as_micros()));
 
         if self.config.enable_flow_dynamics_model {
             let t = Instant::now();
             self.update_star_evolution();
-            comps.push(("update_star_evolution".to_string(), t.elapsed().as_micros() as u128));
+            comps.push(("update_star_evolution".to_string(), t.elapsed().as_micros()));
         }
 
         self.frame += 1;
 
-        let total = global_start.elapsed().as_micros() as u128;
+        let total = global_start.elapsed().as_micros();
         comps.push(("step_total".to_string(), total));
         comps
     }
@@ -2123,7 +2123,7 @@ impl Simulation {
                 age: 0.0,
                 stage: remnant_stage,
                 fuel: 0.0,
-                core_mass: core_mass,
+                core_mass,
                 metallicity: progenitor.star_state.map(|s| s.metallicity).unwrap_or(0.02),
                 luminosity: 0.0,
             };

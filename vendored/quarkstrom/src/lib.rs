@@ -666,7 +666,24 @@ where
                 renderer.render(&mut render_ctx);
                 state.view.position = render_ctx.pos;
                 state.view.scale = render_ctx.scale;
-                state.set_instances(&render_ctx.circles);
+
+                // Optional debug: dump the first N instances to stderr for CPU->GPU verification
+                if std::env::var("RENDER_DEBUG_DUMP_INSTANCES").is_ok() {
+                    eprintln!("RENDER_DEBUG_DUMP_INSTANCES: {} instances", render_ctx.circles.len());
+                    for (i, inst) in render_ctx.circles.iter().enumerate().take(32) {
+                        eprintln!("INST[{}] pos=({:.3},{:.3}) radius={:.3} color={:?}", i, inst.position.x, inst.position.y, inst.radius, inst.color);
+                    }
+                }
+
+                // Optional debug: force instance alpha to opaque before submitting to GPU
+                if std::env::var("RENDER_DEBUG_FORCE_OPAQUE_INSTANCES").is_ok() {
+                    let mut forced = render_ctx.circles.clone();
+                    for inst in forced.iter_mut() { inst.color[3] = 0xff; }
+                    state.set_instances(&forced);
+                } else {
+                    state.set_instances(&render_ctx.circles);
+                }
+
                 state.set_vertices(&render_ctx.lines);
                 state.set_rects(&render_ctx.rects);
 

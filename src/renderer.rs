@@ -461,8 +461,10 @@ let mut desired_distance = (desired_distance_extent + desired_distance_size * 1.
         // set view origin to viewport center and scale so 1.0 unit ~ half-min-viewport pixels.
         let width = self.viewport_size.x.max(1.0);
         let height = self.viewport_size.y.max(1.0);
-        ctx.set_view_pos(Vec2::new(width * 0.5, height * 0.5));
-        ctx.set_view_scale(width.min(height) * 0.5);
+        let view_pos = Vec2::new(width * 0.5, height * 0.5);
+        let view_scale = width.min(height) * 0.5;
+        ctx.set_view_pos(view_pos);
+        ctx.set_view_scale(view_scale);
 
         let cam_pos = self.camera_pos();
         let (forward, right, up) = self.camera_basis();
@@ -505,16 +507,14 @@ let mut desired_distance = (desired_distance_extent + desired_distance_size * 1.
                             radius *= val;
                         }
 
-                        // Convert to an approximate screen-space (pixel) radius using view scale
-                        let mut pixel_radius = radius * width.min(height) * 0.5;
+                        // Map normalized projection to view/world pixel coordinates and compute pixel radius
+                        let mut pixel_radius = radius * view_scale;
+                        let pixel_center = Vec2::new(view_pos.x + pos.x * view_scale, view_pos.y + pos.y * view_scale);
                         // cull if the particle would occupy < 0.5 pixel on screen (tunable)
                         let mut culled = pixel_radius < 0.5 && !debug_disable_cull;
 
                         // Optional per-body projected coordinate + radius logging for debugging
                         if debug_project && debug_logged < debug_limit {
-                            let view_pos = Vec2::new(width * 0.5, height * 0.5);
-                            let view_scale = width.min(height) * 0.5;
-                            let pixel_center = Vec2::new(view_pos.x + pos.x * view_scale, view_pos.y + pos.y * view_scale);
                             eprintln!(
                                 "PROJECTED[{}] world={:?} ndc={:?} pixel=({:.1},{:.1}) z={:.3} radius_world={:.3} radius_px={:.3} culled={}",
                                 i, body.pos, pos, pixel_center.x, pixel_center.y, z, radius, pixel_radius, culled
@@ -558,7 +558,7 @@ let mut desired_distance = (desired_distance_extent + desired_distance_size * 1.
                             let scales = if pixel_radius < 1.2 { [1.0, 0.0, 0.0] } else { [1.8, 1.35, 1.0] };
                             for (layer_index, alpha) in billboard.alpha_layers().iter().enumerate() {
                                 if scales[layer_index] <= 0.0 { continue; }
-                                ctx.draw_circle(pos, radius * scales[layer_index], [red, green, blue, (alpha * 255.0).round() as u8]);
+                                ctx.draw_circle(pixel_center, pixel_radius * scales[layer_index], [red, green, blue, (alpha * 255.0).round() as u8]);
                             }
                         } else {
                             let color = if CHEMISTRY_COMPASS_COLORING.load(Ordering::Relaxed) {
@@ -567,12 +567,13 @@ let mut desired_distance = (desired_distance_extent + desired_distance_size * 1.
                                     [(red * 255.0).round() as u8, (green * 255.0).round() as u8, (blue * 255.0).round() as u8, 0xff]
                                 }).unwrap_or([0xff;4])
                             } else { [0xff;4] };
-                            ctx.draw_circle(pos, radius, color);
+                            ctx.draw_circle(pixel_center, pixel_radius, color);
                         }
                         if self.show_spin_axes {
                             let axis_len = body.polar_radius / (z * tan_half).max(0.01) * 0.45;
                             let axis_tip = pos + Vec2::new(0.0, -axis_len);
-                            ctx.draw_line(pos, axis_tip, [0x80, 0xff, 0xff, 0xff]);
+                            let pixel_axis_tip = Vec2::new(view_pos.x + axis_tip.x * view_scale, view_pos.y + axis_tip.y * view_scale);
+                            ctx.draw_line(pixel_center, pixel_axis_tip, [0x80, 0xff, 0xff, 0xff]);
                         }
                     }
                 }
@@ -675,7 +676,9 @@ let mut desired_distance = (desired_distance_extent + desired_distance_size * 1.
                         if let Some((tip2d, _)) = self.project_point_basis(
                             tip_world, cam_pos, forward, right, up, tan_half, aspect,
                         ) {
-                            ctx.draw_line(pos2d, tip2d, [0x40, 0x80, 0xff, 0xff]);
+                            let pixel_pos2d = Vec2::new(view_pos.x + pos2d.x * view_scale, view_pos.y + pos2d.y * view_scale);
+                            let pixel_tip2d = Vec2::new(view_pos.x + tip2d.x * view_scale, view_pos.y + tip2d.y * view_scale);
+                            ctx.draw_line(pixel_pos2d, pixel_tip2d, [0x40, 0x80, 0xff, 0xff]);
                         }
                     }
                 }
@@ -688,13 +691,15 @@ let mut desired_distance = (desired_distance_extent + desired_distance_size * 1.
                             // size heuristic: small but visible, scaled by log mass
                             let mass_log = t.accounts.mass.max(1.0).log10();
                             let radius = (mass_log * 2.0 + 4.0).min(12.0);
-                            ctx.draw_circle(pos2d, radius, [0xff, 0xd7, 0x00, 0xff]);
+                            let pixel_pos2d = Vec2::new(view_pos.x + pos2d.x * view_scale, view_pos.y + pos2d.y * view_scale);
+                            ctx.draw_circle(pixel_pos2d, radius, [0xff, 0xd7, 0x00, 0xff]);
 
                             if let Some(p_id) = t.parent {
                                 if let Some(parent_table) = tables.iter().find(|x| x.id == p_id) {
                                     if let Some(parent_pos3) = parent_table.position {
                                         if let Some((p2d, _)) = self.project_point(parent_pos3) {
-                                            ctx.draw_line(pos2d, p2d, [0xaa, 0xaa, 0xaa, 0xff]);
+                                            let pixel_p2d = Vec2::new(view_pos.x + p2d.x * view_scale, view_pos.y + p2d.y * view_scale);
+                                            ctx.draw_line(pixel_pos2d, pixel_p2d, [0xaa, 0xaa, 0xaa, 0xff]);
                                         }
                                     }
                                 }

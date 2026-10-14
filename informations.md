@@ -132,7 +132,7 @@ gas_temperature_color_scale: 0.9
 # prob_flyby: Wahrscheinlichkeit für intensive Flybys
 
 galaxy_separation_factor: 10.0
-galaxy_count: 20
+galaxy_count: 30
 galaxy_volume_scatter_factor: 2.0
 galaxy_mass_weighted_separation: true
 galaxy_separation_mass_exponent: 0.333
@@ -211,7 +211,7 @@ performance_octree_reserve_factor: 4.0
 orbital_speed_multiplier: 0.025
 spawn_angular_speed_base: 0.3
 spawn_angular_speed_range: 0.5
-spin_speed_multiplier: 1.0
+spin_speed_multiplier: 16.0
 
 # === BODY DEFORMATION ===
 # equatorial_growth_factor: Wie viel der Äquator-Radius bei Rotation wächst
@@ -521,7 +521,15 @@ Direkte Änderungen:
   - Tests, die mit Emergenz interagieren, müssen globale Zustände (insbesondere `tables::TABLES`) säubern oder deterministisch initialisieren, um Interferenzen unter parallelem Testlauf zu vermeiden (siehe aktualisierter Test‑Hygiene in `src/simulation.rs`).
 
 - Empfehlungen / Entscheidungen:
-  - Wenn Emergenz in Standardläufen verwendet werden soll:    - Setze `enable_flow_dynamics_model = true` und `institution_emergence_mode: "v1"` in der Konfiguration.    - Füge einen Integrationstest hinzu, der `recompute_institutions()` aufruft und überprüft, dass `TABLES` neue Einträge erhält.    - Überwache die Performance und erhöhe ggf. `institution_recompute_interval` oder aktiviere adaptive Interval‑Skalierung.  - Wenn Emergenz bewusst dorman sein soll:    - Dokumentiere das Verhalten (dieser Abschnitt) und annotiere nicht‑genutzte Helper mit klaren Kommentaren / `#[allow(dead_code)]` oder siehe Feature‑Gates.    - Schlage vor, Hilfsfunktionen bei Refactoring zu entfernen oder in ein explizites Feature‑modul zu verschieben.  - Für CI: bis Emergenz‑Workflows stabil sind, sicherstellen, dass Tests globalen Zustand reinigen oder CI mit `RUST_TEST_THREADS=1` laufen lassen (kurzfristiger Workaround).
+  - Wenn Emergenz in Standardläufen verwendet werden soll:
+    - Setze `enable_flow_dynamics_model = true` und `institution_emergence_mode: "v1"` in der Konfiguration.
+    - Füge einen Integrationstest hinzu, der `recompute_institutions()` aufruft und überprüft, dass `TABLES` neue Einträge erhält.
+    - Überwache die Performance und erhöhe ggf. `institution_recompute_interval` oder aktiviere adaptive Interval‑Skalierung.
+  - Wenn Emergenz bewusst dorman sein soll:
+    - Dokumentiere das Verhalten (dieser Abschnitt) und annotiere nicht‑genutzte Helper mit klaren Kommentaren / `#[allow(dead_code)]` oder siehe Feature‑Gates.
+    - Schlage vor, Hilfsfunktionen bei Refactoring zu entfernen oder in ein explizites Feature‑modul zu verschieben.
+  - Für CI: bis Emergenz‑Workflows stabil sind, sicherstellen, dass Tests globalen Zustand reinigen oder CI mit `RUST_TEST_THREADS=1` laufen lassen (kurzfristiger Workaround).
+
 Direkte Änderungen:
 
 - `src/renderer.rs`

@@ -156,8 +156,46 @@ fn main() {
                 (avg_eq_radius * depth_scale_est) / (min_visible_radius * tan_half_fov)
             } else { desired_distance_extent };
             desired_distance_size = desired_distance_size.max(80.0_f32);
-            let mut desired_distance = desired_distance_extent.max(desired_distance_size * 1.25);
+            let mut desired_distance = (desired_distance_extent + desired_distance_size * 1.25) * 0.5;
             desired_distance = desired_distance.clamp(80.0, 2_500_000.0);
+
+            // Defensive verify: if none of the sampled bodies would reach a visible pixel radius at the chosen
+            // distance, move the camera closer in bounded steps. This mirrors the renderer's autofit adjustments
+            // so the headless verifier gives the same practical result as the on-screen renderer.
+            let width = 900.0_f32;
+            let height = 900.0_f32;
+            let view_scale = width.min(height) * 0.5;
+            let mut found_visible = false;
+            let check_n = sample_count.min(128);
+            let camera_yaw = std::f32::consts::PI * 0.25;
+            let camera_pitch = -0.25_f32;
+            for _attempt in 0..6 {
+                let cos_pitch = camera_pitch.cos();
+                let cam_pos_test = center + Vec3::new(
+                    desired_distance * cos_pitch * camera_yaw.cos(),
+                    desired_distance * camera_pitch.sin(),
+                    desired_distance * cos_pitch * camera_yaw.sin(),
+                );
+                let forward_test = (center - cam_pos_test).normalized();
+                let right_test = forward_test.cross(Vec3::new(0.0, 1.0, 0.0)).normalized();
+
+                for b in tmp.iter().take(check_n) {
+                    let rel = b.pos - cam_pos_test;
+                    let z = rel.dot(forward_test);
+                    if z <= 0.01 { continue; }
+                    let radius = b.projected_radius() / (z * tan_half_fov).max(0.01);
+                    let pixel_radius = radius * view_scale;
+                    if pixel_radius >= 1.0 {
+                        found_visible = true;
+                        break;
+                    }
+                }
+
+                if found_visible { break; }
+                if desired_distance <= 80.0 { break; }
+                desired_distance = (desired_distance * 0.5).max(80.0);
+            }
+            eprintln!("VERIFY_AUTOFIT_ADJUST: final camera_distance={} visible_found={}", desired_distance, found_visible);
 
             // Build a simple camera from the autofit results and re-implement the projection math
             let camera_fov = std::f32::consts::PI / 3.0;

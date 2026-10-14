@@ -386,13 +386,52 @@ impl quarkstrom::Renderer for Renderer {
                     // Use a midpoint between extent-based and size-based distances to avoid extreme far/near choices
 let mut desired_distance = (desired_distance_extent + desired_distance_size * 1.25) * 0.5;
 
-                    // Clamp to sensible global range
+                                        // Clamp to sensible global range initially
                     desired_distance = desired_distance.clamp(80.0, 2_500_000.0);
 
-                    self.camera_target = center;
-                    self.camera_distance = desired_distance;
-                    self.camera_autofit_done = true;
-                    autofit_applied = true;
+                                        // Defensive adjustment: if no sample bodies would project to a visible size, gently move the
+                                        // camera closer. This loop is bounded and conservative so it only reduces distance when needed.
+                                        let width_fallback = 900.0_f32;
+                                        let w = if self.viewport_size.x > 1.0 { self.viewport_size.x } else { width_fallback };
+                                        let h = if self.viewport_size.y > 1.0 { self.viewport_size.y } else { width_fallback };
+                                        let view_scale = w.min(h) * 0.5;
+
+                                        let mut found_visible = false;
+                                        let check_n = sample_count.min(128);
+                                        for _attempt in 0..6 {
+                                            let cos_pitch = self.camera_pitch.cos();
+                                            let cam_pos = center + Vec3::new(
+                                                desired_distance * cos_pitch * self.camera_yaw.cos(),
+                                                desired_distance * self.camera_pitch.sin(),
+                                                desired_distance * cos_pitch * self.camera_yaw.sin(),
+                                            );
+                                            let forward = (center - cam_pos).normalized();
+                                            let right = forward.cross(Vec3::new(0.0, 1.0, 0.0)).normalized();
+                                            let _up = right.cross(forward).normalized();
+
+                                            for b in self.bodies.iter().take(check_n) {
+                                                let rel = b.pos - cam_pos;
+                                                let z = rel.dot(forward);
+                                                if z <= 0.01 { continue; }
+                                                let radius = b.projected_radius() / (z * tan_half_fov).max(0.01);
+                                                let pixel_radius = radius * view_scale;
+                                                if pixel_radius >= 1.0 {
+                                                    found_visible = true;
+                                                    break;
+                                                }
+                                            }
+
+                                            if found_visible { break; }
+                                            if desired_distance <= 80.0 { break; }
+                                            desired_distance = (desired_distance * 0.5).max(80.0);
+                                        }
+
+                                        eprintln!("AUTOFIT_ADJUST: final camera_distance={} visible_found={}", desired_distance, found_visible);
+
+                                        self.camera_target = center;
+                                        self.camera_distance = desired_distance;
+                                        self.camera_autofit_done = true;
+                                        autofit_applied = true;
                 }
 
                 eprintln!(

@@ -13,8 +13,6 @@ use crate::{
     render_mode::RenderMode,
     tables::TABLES,
 };
-use std::time::Instant;
-use std::sync::atomic::AtomicUsize;
 
 use quarkstrom::{egui, winit::event::VirtualKeyCode, winit_input_helper::WinitInputHelper};
 
@@ -42,6 +40,16 @@ pub static CAMERA_AUTOFIT_REQUEST: Lazy<AtomicBool> = Lazy::new(|| false.into())
 pub static FORCE_CAMERA: Lazy<AtomicBool> = Lazy::new(|| false.into());
 pub static FORCE_CAMERA_TARGET: Lazy<Mutex<Vec3>> = Lazy::new(|| Mutex::new(Vec3::zero()));
 pub static FORCE_CAMERA_DISTANCE: Lazy<Mutex<f32>> = Lazy::new(|| Mutex::new(600.0));
+
+// In-process debug toggles (can be controlled via the GUI added below) in addition to
+// the environment-variable based debug flags. Env vars have priority when present.
+pub static DEBUG_LOG_PROJECT: Lazy<AtomicBool> = Lazy::new(|| false.into());
+pub static DEBUG_DISABLE_CULL: Lazy<AtomicBool> = Lazy::new(|| false.into());
+pub static DEBUG_DRAW_TEST: Lazy<AtomicBool> = Lazy::new(|| false.into());
+// Force radius scale controlled from the GUI (1.0 = no-op)
+pub static DEBUG_FORCE_RADIUS_SCALE_UI: Lazy<Mutex<f32>> = Lazy::new(|| Mutex::new(1.0));
+// How many published bodies to un-cull / draw first (0 = disabled)
+pub static DEBUG_DRAW_PUBLISHED_FIRST_UI: Lazy<Mutex<usize>> = Lazy::new(|| Mutex::new(0usize));
 
 #[derive(Clone, Copy, Debug)]
 pub struct ManualSpawnRequest {
@@ -465,9 +473,9 @@ let mut desired_distance = (desired_distance_extent + desired_distance_size * 1.
 
         if !self.bodies.is_empty() {
             if self.show_bodies {
-                let debug_project = std::env::var("RENDER_DEBUG_LOG_PROJECT").is_ok();
-                let debug_disable_cull = std::env::var("RENDER_DEBUG_DISABLE_CULL").is_ok();
-                let debug_draw_test = std::env::var("RENDER_DEBUG_DRAW_TEST").is_ok();
+                let debug_project = std::env::var("RENDER_DEBUG_LOG_PROJECT").is_ok() || DEBUG_LOG_PROJECT.load(Ordering::Relaxed);
+                                let debug_disable_cull = std::env::var("RENDER_DEBUG_DISABLE_CULL").is_ok() || DEBUG_DISABLE_CULL.load(Ordering::Relaxed);
+                                let debug_draw_test = std::env::var("RENDER_DEBUG_DRAW_TEST").is_ok() || DEBUG_DRAW_TEST.load(Ordering::Relaxed);
                 let mut debug_logged = 0usize;
                 let debug_limit = 64usize;
                 for (i, body) in self.bodies.iter().enumerate() {
@@ -476,48 +484,70 @@ let mut desired_distance = (desired_distance_extent + desired_distance_size * 1.
                     ) {
                         // compute projected radius and cull decision first
                         let mut radius = body.projected_radius() / (z * tan_half).max(0.01);
-                        // Optional debug override: force-scale radii for visibility during debugging
-                        if let Ok(s) = std::env::var("RENDER_DEBUG_FORCE_RADIUS_SCALE") {
-                            if let Ok(val) = s.parse::<f32>() {
-                                if val.is_finite() && val > 0.0 {
-                                    radius *= val;
-                                }
-                            }
-                        }
-                        // Convert to an approximate screen-space (pixel) radius using view scale
-                        let mut pixel_radius = radius * width.min(height) * 0.5;
-                        // cull if the particle would occupy < 0.5 pixel on screen (tunable)
-                        let mut culled = pixel_radius < 0.5 && !debug_disable_cull;
 
-                        // Optional per-body projected coordinate + radius logging for debugging
-                        if debug_project && debug_logged < debug_limit {
-                            let view_pos = Vec2::new(width * 0.5, height * 0.5);
-                            let view_scale = width.min(height) * 0.5;
-                            let pixel_center = Vec2::new(view_pos.x + pos.x * view_scale, view_pos.y + pos.y * view_scale);
-                            eprintln!(
-                                "PROJECTED[{}] world={:?} ndc={:?} pixel=({:.1},{:.1}) z={:.3} radius_world={:.3} radius_px={:.3} culled={}",
-                                i, body.pos, pos, pixel_center.x, pixel_center.y, z, radius, pixel_radius, culled
-                            );
-                            debug_logged += 1;
-                        }
-
-                        // Debug helper: optionally draw large marker for the first N published bodies (may bypass culling)
-                        if let Ok(nstr) = std::env::var("RENDER_DEBUG_DRAW_PUBLISHED_FIRST") {
-                            if let Ok(n) = nstr.parse::<usize>() {
-                                if i < n {
-                                    // If requested, also force the actual body to be rendered by clearing cull
-                                    culled = false;
-                                    // Optionally allow forcing a bigger radius for the unculled bodies
-                                    if let Ok(s) = std::env::var("RENDER_DEBUG_DRAW_PUBLISHED_FORCE_RADIUS_SCALE") {
-                                        if let Ok(val) = s.parse::<f32>() {
-                                            if val.is_finite() && val > 0.0 {
-                                                radius *= val;
-                                                pixel_radius = radius * width.min(height) * 0.5;
-                                            }
-                                        }
+                            // Optional debug override: force-scale radii for visibility during debugging
+                            // Priority: env var RENDER_DEBUG_FORCE_RADIUS_SCALE > in-process UI value
+                            let mut force_scale: Option<f32> = None;
+                            if let Ok(s) = std::env::var("RENDER_DEBUG_FORCE_RADIUS_SCALE") {
+                                if let Ok(val) = s.parse::<f32>() {
+                                    if val.is_finite() && val > 0.0 {
+                                        force_scale = Some(val);
                                     }
                                 }
                             }
+                            if force_scale.is_none() {
+                                let v = *DEBUG_FORCE_RADIUS_SCALE_UI.lock();
+                                if v.is_finite() && v > 0.0 && (v - 1.0).abs() > std::f32::EPSILON {
+                                    force_scale = Some(v);
+                                }
+                            }
+                            if let Some(val) = force_scale {
+                                radius *= val;
+                            }
+
+                            // Convert to an approximate screen-space (pixel) radius using view scale
+                            let mut pixel_radius = radius * width.min(height) * 0.5;
+                            // cull if the particle would occupy < 0.5 pixel on screen (tunable)
+                            let mut culled = pixel_radius < 0.5 && !debug_disable_cull;
+
+                            // Optional per-body projected coordinate + radius logging for debugging
+                            if debug_project && debug_logged < debug_limit {
+                                let view_pos = Vec2::new(width * 0.5, height * 0.5);
+                                let view_scale = width.min(height) * 0.5;
+                                let pixel_center = Vec2::new(view_pos.x + pos.x * view_scale, view_pos.y + pos.y * view_scale);
+                                eprintln!(
+                                    "PROJECTED[{}] world={:?} ndc={:?} pixel=({:.1},{:.1}) z={:.3} radius_world={:.3} radius_px={:.3} culled={}",
+                                    i, body.pos, pos, pixel_center.x, pixel_center.y, z, radius, pixel_radius, culled
+                                );
+                                debug_logged += 1;
+                            }
+
+                            // Debug helper: optionally draw large marker for the first N published bodies (may bypass culling)
+                            // Priority: env var > in-process UI value
+                            let mut published_first_n = 0usize;
+                            if let Ok(nstr) = std::env::var("RENDER_DEBUG_DRAW_PUBLISHED_FIRST") {
+                                if let Ok(n) = nstr.parse::<usize>() { published_first_n = n; }
+                            } else {
+                                published_first_n = *DEBUG_DRAW_PUBLISHED_FIRST_UI.lock();
+                            }
+                            if published_first_n > 0 && i < published_first_n {
+                                // If requested, also force the actual body to be rendered by clearing cull
+                                culled = false;
+                                // determine force scale (env var overrides UI)
+                                let mut forced_scale = None;
+                                if let Ok(s) = std::env::var("RENDER_DEBUG_DRAW_PUBLISHED_FORCE_RADIUS_SCALE") {
+                                    if let Ok(val) = s.parse::<f32>() {
+                                        if val.is_finite() && val > 0.0 { forced_scale = Some(val); }
+                                    }
+                                }
+                                if forced_scale.is_none() {
+                                    let v = *DEBUG_FORCE_RADIUS_SCALE_UI.lock();
+                                    if v.is_finite() && v > 0.0 && (v - 1.0).abs() > std::f32::EPSILON { forced_scale = Some(v); }
+                                }
+                                if let Some(val) = forced_scale {
+                                    radius *= val;
+                                    pixel_radius = radius * width.min(height) * 0.5;
+                                }
                         }
 
                         // Screen-space culling: skip bodies that project smaller than a pixel threshold
@@ -896,6 +926,43 @@ let mut desired_distance = (desired_distance_extent + desired_distance_size * 1.
                     }
                 });
         }
+
+        // Render debug window accessible in GUI for quick toggles
+        egui::Window::new("Render Debug")
+            .anchor(egui::Align2::RIGHT_TOP, [-8.0, 8.0])
+            .resizable(false)
+            .show(ctx, |ui| {
+                // Disable culling toggle
+                let mut disable_cull = DEBUG_DISABLE_CULL.load(Ordering::Relaxed);
+                if ui.checkbox(&mut disable_cull, "Disable screen-space cull").changed() {
+                    DEBUG_DISABLE_CULL.store(disable_cull, Ordering::Relaxed);
+                }
+                // Draw center test dot toggle
+                let mut draw_test = DEBUG_DRAW_TEST.load(Ordering::Relaxed);
+                if ui.checkbox(&mut draw_test, "Draw center test dot").changed() {
+                    DEBUG_DRAW_TEST.store(draw_test, Ordering::Relaxed);
+                }
+
+                ui.separator();
+
+                // Force radius scale (UI-controlled)
+                let mut force_val = *DEBUG_FORCE_RADIUS_SCALE_UI.lock();
+                ui.horizontal(|ui| {
+                    ui.label("Force radius scale:");
+                    if ui.add(egui::DragValue::new(&mut force_val).speed(0.1)).changed() {
+                        *DEBUG_FORCE_RADIUS_SCALE_UI.lock() = force_val.clamp(0.0, 10000.0);
+                    }
+                });
+
+                // Number of first published bodies to un-cull/draw
+                let mut n = *DEBUG_DRAW_PUBLISHED_FIRST_UI.lock();
+                ui.horizontal(|ui| {
+                    ui.label("Unculled first N:");
+                    if ui.add(egui::DragValue::new(&mut n).speed(1)).changed() {
+                        *DEBUG_DRAW_PUBLISHED_FIRST_UI.lock() = n;
+                    }
+                });
+            });
     }
 }
 

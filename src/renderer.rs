@@ -446,9 +446,9 @@ let mut desired_distance = (desired_distance_extent + desired_distance_size * 1.
                             }
                         }
                         // Convert to an approximate screen-space (pixel) radius using view scale
-                        let pixel_radius = radius * width.min(height) * 0.5;
+                        let mut pixel_radius = radius * width.min(height) * 0.5;
                         // cull if the particle would occupy < 0.5 pixel on screen (tunable)
-                        let culled = pixel_radius < 0.5 && !debug_disable_cull;
+                        let mut culled = pixel_radius < 0.5 && !debug_disable_cull;
 
                         // Optional per-body projected coordinate + radius logging for debugging
                         if debug_project && debug_logged < debug_limit {
@@ -462,12 +462,21 @@ let mut desired_distance = (desired_distance_extent + desired_distance_size * 1.
                             debug_logged += 1;
                         }
 
-                        // Debug helper: optionally draw large marker for the first N published bodies (bypasses culling)
+                        // Debug helper: optionally draw large marker for the first N published bodies (may bypass culling)
                         if let Ok(nstr) = std::env::var("RENDER_DEBUG_DRAW_PUBLISHED_FIRST") {
                             if let Ok(n) = nstr.parse::<usize>() {
                                 if i < n {
-                                    // normalized radius chosen to map to a visible pixel size; tuned for typical viewport
-                                    ctx.draw_circle(pos, 0.04, [0xff, 0x80, 0x00, 0xff]);
+                                    // If requested, also force the actual body to be rendered by clearing cull
+                                    culled = false;
+                                    // Optionally allow forcing a bigger radius for the unculled bodies
+                                    if let Ok(s) = std::env::var("RENDER_DEBUG_DRAW_PUBLISHED_FORCE_RADIUS_SCALE") {
+                                        if let Ok(val) = s.parse::<f32>() {
+                                            if val.is_finite() && val > 0.0 {
+                                                radius *= val;
+                                                pixel_radius = radius * width.min(height) * 0.5;
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

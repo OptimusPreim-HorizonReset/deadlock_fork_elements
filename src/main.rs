@@ -31,6 +31,7 @@ mod utils;
 mod scientific_validation;
 
 use renderer::Renderer;
+use quarkstrom::Renderer as _;
 use ultraviolet::Vec3;
 use simulation::Simulation;
 
@@ -71,6 +72,164 @@ fn main() {
     }
 
     let mut simulation = Simulation::new(&sim_config);
+
+    // If requested, run a headless render verification pass and exit (useful for CI/debug)
+    if std::env::var("VERIFY_RENDER_HEADLESS").is_ok() {
+        // Reuse a small sampling of the simulation and run the renderer projection math
+        // to check whether any published bodies would be visible on a typical viewport.
+        fn verify_render_headless(sim: &mut Simulation, config: &config::InformationsConfig) {
+            use renderer::RenderBody;
+            use renderer::Renderer as TestRenderer;
+            use ultraviolet::Vec3;
+
+            // Step the sim a few frames to stabilise
+            for _ in 0..3 {
+                sim.step();
+            }
+
+            // Prepare the published RenderBody vector using same sampling logic as render()
+            let limit = sim.performance_render_body_limit();
+            let sample_ratio = sim.performance_render_sample_ratio();
+            let body_count = sim.bodies.len();
+            let mut tmp: Vec<RenderBody> = Vec::new();
+            if body_count == 0 {
+                eprintln!("VERIFY_RENDER: no bodies in simulation");
+                std::process::exit(2);
+            }
+            if limit >= body_count {
+                tmp.reserve(body_count);
+                for b in sim.bodies.iter() {
+                    tmp.push(RenderBody::from_body(b));
+                }
+            } else {
+                let sample_count = ((limit as f32) * sample_ratio).round() as usize;
+                let sample_count = sample_count.max(1).min(limit);
+                tmp = Vec::with_capacity(sample_count);
+                let stride = (body_count as f32 / sample_count as f32).floor() as usize;
+                let stride = stride.max(1);
+                let mut idx = 0usize;
+                let mut produced = 0usize;
+                while produced < sample_count && idx < body_count {
+                    tmp.push(RenderBody::from_body(&sim.bodies[idx]));
+                    produced += 1;
+                    idx += stride;
+                }
+                let mut j = body_count.saturating_sub(1);
+                while produced < sample_count && j > 0 {
+                    tmp.push(RenderBody::from_body(&sim.bodies[j]));
+                    produced += 1;
+                    if j == 0 { break; }
+                    j = j.saturating_sub(1);
+                }
+            }
+
+            // Compute a simple camera autofit like the renderer does
+            let sample_count = tmp.len().min(1024);
+            let mut min = Vec3::new(f32::MAX, f32::MAX, f32::MAX);
+            let mut max = Vec3::new(f32::MIN, f32::MIN, f32::MIN);
+            let mut sum = Vec3::zero();
+            for b in tmp.iter().take(sample_count) {
+                min.x = min.x.min(b.pos.x);
+                min.y = min.y.min(b.pos.y);
+                min.z = min.z.min(b.pos.z);
+                max.x = max.x.max(b.pos.x);
+                max.y = max.y.max(b.pos.y);
+                max.z = max.z.max(b.pos.z);
+                sum += b.pos;
+            }
+            let count_f = sample_count as f32;
+            let mean = sum / count_f;
+            let center = ((min + max) * 0.5 + mean) * 0.5;
+            let mut extent = (max - min).mag();
+            if !extent.is_finite() || extent <= 0.0 { extent = 80.0; }
+
+            // Compute desired distances (mirror the renderer logic)
+            let camera_fov = std::f32::consts::PI / 3.0;
+            let tan_half_fov = (camera_fov * 0.5).tan();
+            let mut desired_distance_extent = extent * 1.25;
+            let avg_eq_radius = if sample_count > 0 {
+                tmp.iter().take(sample_count).map(|b| b.equatorial_radius).sum::<f32>() / sample_count as f32
+            } else { 1.0 };
+            let depth_scale_est = 0.85_f32;
+            let min_visible_radius = 2.0_f32;
+            let mut desired_distance_size = if avg_eq_radius > 0.0 {
+                (avg_eq_radius * depth_scale_est) / (min_visible_radius * tan_half_fov)
+            } else { desired_distance_extent };
+            desired_distance_size = desired_distance_size.max(80.0_f32);
+            let mut desired_distance = desired_distance_extent.max(desired_distance_size * 1.25);
+            desired_distance = desired_distance.clamp(80.0, 2_500_000.0);
+
+            // Build a simple camera from the autofit results and re-implement the projection math
+            let camera_fov = std::f32::consts::PI / 3.0;
+            let tan_half = (camera_fov * 0.5).tan();
+            let camera_yaw = std::f32::consts::PI * 0.25;
+            let camera_pitch = -0.25_f32;
+            let cos_pitch = camera_pitch.cos();
+            let cam_pos = center + Vec3::new(
+                desired_distance * cos_pitch * camera_yaw.cos(),
+                desired_distance * camera_pitch.sin(),
+                desired_distance * cos_pitch * camera_yaw.sin(),
+            );
+            let forward = (center - cam_pos).normalized();
+            let right = forward.cross(Vec3::new(0.0, 1.0, 0.0)).normalized();
+            let up = right.cross(forward).normalized();
+
+            // typical viewport for headless check
+            let width = 900.0_f32;
+            let height = 900.0_f32;
+            let aspect = width / height;
+            let view_scale = width.min(height) * 0.5;
+
+            // Respect optional env overrides to help debugging remotely
+            let force_radius_scale: f32 = std::env::var("RENDER_DEBUG_FORCE_RADIUS_SCALE").ok().and_then(|v| v.parse::<f32>().ok()).unwrap_or(1.0_f32);
+            let min_pixel_threshold: f32 = std::env::var("VERIFY_RENDER_MIN_PIXEL").ok().and_then(|v| v.parse::<f32>().ok()).unwrap_or(1.0_f32);
+
+            let mut visible = 0usize;
+            for (i, b) in tmp.iter().enumerate() {
+                let rel = b.pos - cam_pos;
+                let z = rel.dot(forward);
+                if z <= 0.1 { continue; }
+                let x = rel.dot(right);
+                let y = rel.dot(up);
+                let proj_x = x / (z * tan_half);
+                let proj_y = y / (z * tan_half);
+                let ndc_x = proj_x * aspect;
+                let ndc_y = proj_y;
+                let radius = b.projected_radius() / (z * tan_half).max(0.01);
+                let pixel_radius = radius * view_scale * force_radius_scale;
+                // If requested, treat the first-N published samples as unculled (matches renderer debug behaviour)
+                if let Ok(nstr) = std::env::var("RENDER_DEBUG_DRAW_PUBLISHED_FIRST") {
+                    if let Ok(n) = nstr.parse::<usize>() {
+                        if i < n {
+                            visible += 1;
+                            let pixel_center_x = width * 0.5 + ndc_x * view_scale;
+                            let pixel_center_y = height * 0.5 + ndc_y * view_scale;
+                            eprintln!("VERIFY_RENDER_VISIBLE[{}] (forced) pixel_radius={:.3} pixel=({:.1},{:.1}) world={:?}", i, pixel_radius, pixel_center_x, pixel_center_y, b.pos);
+                            continue;
+                        }
+                    }
+                }
+
+                if pixel_radius >= min_pixel_threshold {
+                    visible += 1;
+                    let pixel_center_x = width * 0.5 + ndc_x * view_scale;
+                    let pixel_center_y = height * 0.5 + ndc_y * view_scale;
+                    eprintln!("VERIFY_RENDER_VISIBLE[{}] pixel_radius={:.3} pixel=({:.1},{:.1}) world={:?}", i, pixel_radius, pixel_center_x, pixel_center_y, b.pos);
+                }
+            }
+            eprintln!("VERIFY_RENDER: visible_candidates={} / {} sampled", visible, tmp.len());
+            if visible == 0 {
+                eprintln!("VERIFY_RENDER: no visible published bodies detected (use RENDER_DEBUG_* flags for deeper inspection)");
+                std::process::exit(2);
+            } else {
+                eprintln!("VERIFY_RENDER: success — some bodies project to visible pixel sizes");
+                std::process::exit(0);
+            }
+        }
+
+        verify_render_headless(&mut simulation, &sim_config);
+    }
+
     // One-shot recompute on initial startup if flow-dynamics feature is enabled
     if sim_config.enable_flow_dynamics_model {
         simulation.cache_galaxies();

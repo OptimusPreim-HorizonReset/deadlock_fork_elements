@@ -399,11 +399,10 @@ impl InformationsConfig {
             }
         }
 
-        if !file_found {
-            if std::env::var("PROFILE_RUNTIME").is_err() {
+        if !file_found
+            && std::env::var("PROFILE_RUNTIME").is_err() {
                 eprintln!("⚠ informations.md nicht gefunden. Verwende Standardwerte.");
             }
-        }
 
         let mut config = InformationsConfig::default();
         let mut in_block = false;

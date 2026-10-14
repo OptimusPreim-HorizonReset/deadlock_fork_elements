@@ -302,11 +302,10 @@ pub fn all_elements() -> impl Iterator<Item = ElementDefinition> {
 }
 
 pub fn binding_tendency(first: ElementDefinition, second: ElementDefinition) -> BindingTendency {
-    if first.family == ElementFamily::NobleGas || second.family == ElementFamily::NobleGas {
-        if first.reactivity_score() < 0.15 || second.reactivity_score() < 0.15 {
+    if (first.family == ElementFamily::NobleGas || second.family == ElementFamily::NobleGas)
+        && (first.reactivity_score() < 0.15 || second.reactivity_score() < 0.15) {
             return BindingTendency::Inert;
         }
-    }
 
     let first_metal = is_metal(first.family);
     let second_metal = is_metal(second.family);

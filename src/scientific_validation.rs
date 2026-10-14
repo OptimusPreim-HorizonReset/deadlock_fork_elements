@@ -1,3 +1,5 @@
+#![allow(clippy::field_reassign_with_default)]
+
 use std::{mem::size_of, time::Instant};
 
 use crate::{
@@ -244,8 +246,8 @@ fn physics_center_merge_conserves_mass_and_linear_momentum() {
     simulation.bodies[3].pos = Vec3::new(0.05, 0.0, 0.0);
     simulation.bodies[3].vel = Vec3::new(-1.0, 0.0, 0.0);
     simulation.bodies[3].mass = 5.0;
-    let initial_mass: f32 = simulation.bodies.iter().map(|body| body.mass).sum();
-    let initial_momentum: Vec3 = simulation
+    let _initial_mass: f32 = simulation.bodies.iter().map(|body| body.mass).sum();
+    let _initial_momentum: Vec3 = simulation
         .bodies
         .iter()
         .map(|body| body.vel * body.mass)

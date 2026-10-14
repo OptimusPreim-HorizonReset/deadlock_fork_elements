@@ -381,7 +381,10 @@ impl quarkstrom::Renderer for Renderer {
                     desired_distance_size = desired_distance_size.max(80.0_f32);
 
                     // Prefer a distance that allows bodies to be visible; avoid moving so close the scene is clipped.
-                    let mut desired_distance = desired_distance_extent.min(desired_distance_size * 1.25);
+                    // Use max() so the chosen distance is large enough to encompass the scene extent or
+                    // to make average bodies visible, whichever is larger.
+                    // Use a midpoint between extent-based and size-based distances to avoid extreme far/near choices
+let mut desired_distance = (desired_distance_extent + desired_distance_size * 1.25) * 0.5;
 
                     // Clamp to sensible global range
                     desired_distance = desired_distance.clamp(80.0, 2_500_000.0);
@@ -433,8 +436,19 @@ impl quarkstrom::Renderer for Renderer {
                         body.pos, cam_pos, forward, right, up, tan_half, aspect,
                     ) {
                         // compute projected radius and cull decision first
-                        let radius = body.projected_radius() / (z * tan_half).max(0.01);
-                        let culled = radius < 0.4 && !debug_disable_cull;
+                        let mut radius = body.projected_radius() / (z * tan_half).max(0.01);
+                        // Optional debug override: force-scale radii for visibility during debugging
+                        if let Ok(s) = std::env::var("RENDER_DEBUG_FORCE_RADIUS_SCALE") {
+                            if let Ok(val) = s.parse::<f32>() {
+                                if val.is_finite() && val > 0.0 {
+                                    radius *= val;
+                                }
+                            }
+                        }
+                        // Convert to an approximate screen-space (pixel) radius using view scale
+                        let pixel_radius = radius * width.min(height) * 0.5;
+                        // cull if the particle would occupy < 0.5 pixel on screen (tunable)
+                        let culled = pixel_radius < 0.5 && !debug_disable_cull;
 
                         // Optional per-body projected coordinate + radius logging for debugging
                         if debug_project && debug_logged < debug_limit {
@@ -442,10 +456,20 @@ impl quarkstrom::Renderer for Renderer {
                             let view_scale = width.min(height) * 0.5;
                             let pixel_center = Vec2::new(view_pos.x + pos.x * view_scale, view_pos.y + pos.y * view_scale);
                             eprintln!(
-                                "PROJECTED[{}] world={:?} ndc={:?} pixel=({:.1},{:.1}) z={:.3} radius={:.3} culled={}",
-                                i, body.pos, pos, pixel_center.x, pixel_center.y, z, radius, culled
+                                "PROJECTED[{}] world={:?} ndc={:?} pixel=({:.1},{:.1}) z={:.3} radius_world={:.3} radius_px={:.3} culled={}",
+                                i, body.pos, pos, pixel_center.x, pixel_center.y, z, radius, pixel_radius, culled
                             );
                             debug_logged += 1;
+                        }
+
+                        // Debug helper: optionally draw large marker for the first N published bodies (bypasses culling)
+                        if let Ok(nstr) = std::env::var("RENDER_DEBUG_DRAW_PUBLISHED_FIRST") {
+                            if let Ok(n) = nstr.parse::<usize>() {
+                                if i < n {
+                                    // normalized radius chosen to map to a visible pixel size; tuned for typical viewport
+                                    ctx.draw_circle(pos, 0.04, [0xff, 0x80, 0x00, 0xff]);
+                                }
+                            }
                         }
 
                         // Screen-space culling: skip bodies that project smaller than a pixel threshold
@@ -456,8 +480,8 @@ impl quarkstrom::Renderer for Renderer {
                         if body.segment == BodySegment::Gas {
                             let billboard = GasBillboard::new(body.gas_density, body.gas_temperature);
                             let [red, green, blue] = billboard.color();
-                            // Reduce layers for small projected sizes to save draw calls
-                            let scales = if radius < 1.2 { [1.0, 0.0, 0.0] } else { [1.8, 1.35, 1.0] };
+                            // Reduce layers for small projected sizes to save draw calls (use pixel_radius)
+                            let scales = if pixel_radius < 1.2 { [1.0, 0.0, 0.0] } else { [1.8, 1.35, 1.0] };
                             for (layer_index, alpha) in billboard.alpha_layers().iter().enumerate() {
                                 if scales[layer_index] <= 0.0 { continue; }
                                 ctx.draw_circle(pos, radius * scales[layer_index], [red, green, blue, (alpha * 255.0).round() as u8]);
@@ -754,7 +778,8 @@ impl quarkstrom::Renderer for Renderer {
                             let mass_log = t.accounts.mass.max(1.0).log10();
                             let node_r = (mass_log * 2.0 + 6.0).clamp(4.0, 16.0);
                             if dist <= node_r * 1.2 {
-                                if best.is_none() || dist < best.unwrap().1 {
+                                // Avoid unwrap on best; use map+unwrap_or to compare safely.
+                                if best.map(|b| dist < b.1).unwrap_or(true) {
                                     best = Some((*id, dist));
                                 }
                             }

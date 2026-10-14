@@ -2229,23 +2229,30 @@ impl Simulation {
         let binding_response = if self.config.enable_elemental_binding_response {
             match (b1.element_atomic_number, b2.element_atomic_number) {
                 (Some(first_number), Some(second_number)) => {
-                    let tendency = binding_tendency(
-                        element_by_atomic_number(first_number).unwrap(),
-                        element_by_atomic_number(second_number).unwrap(),
-                    );
-                    let response_strength = match tendency {
-                        BindingTendency::Inert => 0.0,
-                        BindingTendency::Metallic => 0.25,
-                        BindingTendency::NonPolarCovalent => 0.35,
-                        BindingTendency::PolarCovalent => 0.7,
-                        BindingTendency::Ionic => 1.0,
-                    };
-                    (1.0 - self
-                        .config
-                        .elemental_binding_response_strength
-                        .clamp(0.0, 1.0)
-                        * response_strength)
-                        .clamp(0.0, 1.0)
+                    // Defensive lookup: element_by_atomic_number may return None for invalid numbers.
+                    // If either lookup fails, fall back to neutral binding response (1.0).
+                    match (
+                        element_by_atomic_number(first_number),
+                        element_by_atomic_number(second_number),
+                    ) {
+                        (Some(first_el), Some(second_el)) => {
+                            let tendency = binding_tendency(first_el, second_el);
+                            let response_strength = match tendency {
+                                BindingTendency::Inert => 0.0,
+                                BindingTendency::Metallic => 0.25,
+                                BindingTendency::NonPolarCovalent => 0.35,
+                                BindingTendency::PolarCovalent => 0.7,
+                                BindingTendency::Ionic => 1.0,
+                            };
+                            (1.0 - self
+                                .config
+                                .elemental_binding_response_strength
+                                .clamp(0.0, 1.0)
+                                * response_strength)
+                                .clamp(0.0, 1.0)
+                        }
+                        _ => 1.0,
+                    }
                 }
                 _ => 1.0,
             }

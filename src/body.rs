@@ -123,6 +123,7 @@ impl Body {
         self
     }
 
+    #[allow(dead_code)]
     pub fn with_id(mut self, body_id: u64) -> Self {
         self.body_id = body_id;
         self
@@ -160,6 +161,7 @@ impl Body {
         self.update_shape();
     }
 
+    #[allow(dead_code)]
     pub fn projected_radius(&self) -> f32 {
         let depth_scale = (1.0 - self.pos.z * 0.002).clamp(0.55, 1.4);
         self.equatorial_radius * depth_scale

@@ -1,4 +1,3 @@
-use fastrand;
 
 // Deterministic seed helpers and simple astrophysical types used by the simulation.
 // This module intentionally contains small, well-tested helpers and plain data
@@ -25,8 +24,8 @@ pub fn sample_powerlaw_mass(rng: &mut fastrand::Rng, m_min: f32, m_max: f32, alp
     let u = rng.f32();
     if (alpha - 1.0).abs() < 1e-6 {
         // special case: 1/x -> uniform in log-space
-        let x = (m_min.ln() + u * (m_max.ln() - m_min.ln())).exp();
-        x
+        
+        (m_min.ln() + u * (m_max.ln() - m_min.ln())).exp()
     } else {
         let ia = 1.0 - alpha;
         let mminp = m_min.powf(ia);
@@ -38,6 +37,7 @@ pub fn sample_powerlaw_mass(rng: &mut fastrand::Rng, m_min: f32, m_max: f32, alp
 /// Simple gas cell state used as a light-weight abstraction for hydrodynamic
 /// collapse/fragmentation decisions. The simulation still uses Body.gas_density etc.,
 /// but this type centralizes extra fields for future use.
+#[allow(dead_code)]
 #[derive(Clone, Debug, Default)]
 pub struct GasState {
     pub mass: f32,
@@ -49,7 +49,9 @@ pub struct GasState {
 
 /// Star lifecycle stages used by the simple deterministic star evolution state machine.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Default)]
 pub enum StarStage {
+    #[default]
     Protostar,
     MainSequence,
     RedGiant,
@@ -58,13 +60,9 @@ pub enum StarStage {
     RemnantBlackHole,
 }
 
-impl Default for StarStage {
-    fn default() -> Self {
-        StarStage::Protostar
-    }
-}
 
 /// Minimal deterministic star state used to track fuel, age and decide end-of-life events.
+#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct StarState {
     pub mass: f32,

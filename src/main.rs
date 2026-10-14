@@ -230,7 +230,8 @@ fn main() {
                 let y = rel.dot(up);
                 let proj_x = x / (z * tan_half);
                 let proj_y = y / (z * tan_half);
-                let ndc_x = proj_x * aspect;
+                // Use same mapping as renderer.project_point_basis: divide proj_x by aspect
+                let ndc_x = proj_x / aspect;
                 let ndc_y = proj_y;
                 let radius = b.projected_radius() / (z * tan_half).max(0.01);
                 let pixel_radius = radius * view_scale * force_radius_scale;
@@ -255,6 +256,68 @@ fn main() {
                 }
             }
             eprintln!("VERIFY_RENDER: visible_candidates={} / {} sampled", visible, tmp.len());
+
+            // Optional: export a rasterized proof image (PNG) of projected sample positions
+            if std::env::var("VERIFY_RENDER_EXPORT_PNG").is_ok() {
+                // Requires the 'image' crate in Cargo.toml
+                use image::{RgbaImage, Rgba};
+                let width_u = width as u32;
+                let height_u = height as u32;
+                let mut im: RgbaImage = RgbaImage::from_pixel(width_u, height_u, Rgba([0, 0, 0, 255]));
+                let ts = match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+                    Ok(d) => d.as_secs(),
+                    Err(_) => 0u64,
+                };
+                let filename = format!("logs/verify_render_{}.png", ts);
+                let _ = std::fs::create_dir_all("logs");
+                // Draw each sampled body as a filled circle (visible => white, forced => red, otherwise dim gray)
+                for (i, b) in tmp.iter().enumerate() {
+                    let rel = b.pos - cam_pos;
+                    let z = rel.dot(forward);
+                    if z <= 0.1 { continue; }
+                    let x = rel.dot(right);
+                    let y = rel.dot(up);
+                    let proj_x = x / (z * tan_half);
+                    let proj_y = y / (z * tan_half);
+                    let ndc_x = proj_x / aspect;
+                    let ndc_y = proj_y;
+                    let pixel_center_x = width * 0.5 + ndc_x * view_scale;
+                    let pixel_center_y = height * 0.5 + ndc_y * view_scale;
+                    let radius = b.projected_radius() / (z * tan_half).max(0.01);
+                    let pixel_radius = (radius * view_scale * force_radius_scale).max(0.5_f32);
+                    let cx = pixel_center_x.round() as i32;
+                    let cy = pixel_center_y.round() as i32;
+                    let r = pixel_radius.ceil() as i32;
+                    let forced_n = std::env::var("RENDER_DEBUG_DRAW_PUBLISHED_FIRST").ok().and_then(|s| s.parse::<usize>().ok()).unwrap_or(0usize);
+                    let color = if i < forced_n {
+                        Rgba([255u8, 0u8, 0u8, 255u8])
+                    } else if pixel_radius >= min_pixel_threshold {
+                        Rgba([255u8, 255u8, 255u8, 255u8])
+                    } else {
+                        Rgba([80u8, 80u8, 80u8, 255u8])
+                    };
+                    let x0 = (cx - r).max(0) as u32;
+                    let x1 = (cx + r).max(0) as u32;
+                    let y0 = (cy - r).max(0) as u32;
+                    let y1 = (cy + r).max(0) as u32;
+                    for py in y0..=y1 {
+                        if py as i32 >= height_u as i32 { break; }
+                        for px in x0..=x1 {
+                            if px as i32 >= width_u as i32 { break; }
+                            let dx = px as i32 - cx;
+                            let dy = py as i32 - cy;
+                            if (dx*dx + dy*dy) as f32 <= (pixel_radius * pixel_radius) {
+                                im.put_pixel(px, py, color);
+                            }
+                        }
+                    }
+                }
+                match im.save(&filename) {
+                    Ok(_) => eprintln!("VERIFY_RENDER: exported rasterized proof {}", filename),
+                    Err(e) => eprintln!("VERIFY_RENDER: failed to save raster {}: {}", filename, e),
+                }
+            }
+
             if visible == 0 {
                 eprintln!("VERIFY_RENDER: no visible published bodies detected (use RENDER_DEBUG_* flags for deeper inspection)");
                 std::process::exit(2);

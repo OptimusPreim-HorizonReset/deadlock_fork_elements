@@ -296,10 +296,13 @@ fn main() {
         if profile_runtime {
             // ensure logs folder exists
             let _ = std::fs::create_dir_all("logs");
-            let ts = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs();
+            let ts = match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+                Ok(d) => d.as_secs(),
+                Err(err) => {
+                    eprintln!("System time before UNIX_EPOCH: {}. Using 0 as timestamp.", err);
+                    0u64
+                }
+            };
             let filename = format!("logs/profiler-{}.csv", ts);
             match File::create(&filename) {
                 Ok(mut f) => {

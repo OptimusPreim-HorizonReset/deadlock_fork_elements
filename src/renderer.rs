@@ -954,7 +954,11 @@ impl Renderer {
         let y = rel.dot(up);
         let proj_x = x / (z * tan_half);
         let proj_y = y / (z * tan_half);
-        let pos = Vec2::new(proj_x * aspect, proj_y);
+        // Correct horizontal projection: divide by aspect (width/height) rather than multiply.
+        // Using *aspect was inverting the horizontal scaling and pushed the scene towards
+        // the left/bottom in many viewport sizes. This mapping keeps pos in NDC where
+        // x,y in roughly [-1,1] for the visible frustum.
+        let pos = Vec2::new(proj_x / aspect, proj_y);
         Some((pos, z))
     }
 

@@ -553,8 +553,8 @@ impl State {
                     buffer: &output_buffer,
                     layout: wgpu::ImageDataLayout {
                         offset: 0,
-                        bytes_per_row: NonZeroU32::new(padded_bytes_per_row),
-                        rows_per_image: NonZeroU32::new(height),
+                    bytes_per_row: Some(padded_bytes_per_row),
+                    rows_per_image: Some(height),
                     },
                 },
                 wgpu::Extent3d {

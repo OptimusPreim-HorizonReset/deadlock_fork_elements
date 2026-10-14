@@ -31,7 +31,6 @@ mod utils;
 mod scientific_validation;
 
 use renderer::Renderer;
-use quarkstrom::Renderer as _;
 use ultraviolet::Vec3;
 use simulation::Simulation;
 
@@ -77,9 +76,9 @@ fn main() {
     if std::env::var("VERIFY_RENDER_HEADLESS").is_ok() {
         // Reuse a small sampling of the simulation and run the renderer projection math
         // to check whether any published bodies would be visible on a typical viewport.
-        fn verify_render_headless(sim: &mut Simulation, config: &config::InformationsConfig) {
+        fn verify_render_headless(sim: &mut Simulation, _config: &config::InformationsConfig) {
             use renderer::RenderBody;
-            use renderer::Renderer as TestRenderer;
+            
             use ultraviolet::Vec3;
 
             // Step the sim a few frames to stabilise
@@ -146,7 +145,7 @@ fn main() {
             // Compute desired distances (mirror the renderer logic)
             let camera_fov = std::f32::consts::PI / 3.0;
             let tan_half_fov = (camera_fov * 0.5).tan();
-            let mut desired_distance_extent = extent * 1.25;
+            let desired_distance_extent = extent * 1.25;
             let avg_eq_radius = if sample_count > 0 {
                 tmp.iter().take(sample_count).map(|b| b.equatorial_radius).sum::<f32>() / sample_count as f32
             } else { 1.0 };
@@ -177,7 +176,7 @@ fn main() {
                     desired_distance * cos_pitch * camera_yaw.sin(),
                 );
                 let forward_test = (center - cam_pos_test).normalized();
-                let right_test = forward_test.cross(Vec3::new(0.0, 1.0, 0.0)).normalized();
+                let _right_test = forward_test.cross(Vec3::new(0.0, 1.0, 0.0)).normalized();
 
                 for b in tmp.iter().take(check_n) {
                     let rel = b.pos - cam_pos_test;
@@ -583,7 +582,7 @@ fn config_hash(config: &config::InformationsConfig) -> u64 {
 fn render(simulation: &mut Simulation, frame: usize) {
     let interval = simulation.render_update_interval();
     let mut lock = renderer::UPDATE_LOCK.lock();
-    if frame % interval == 0 {
+    if frame.is_multiple_of(interval) {
         {
             // Convert to RenderBody outside of the renderer lock to minimize mutex hold time.
             // To reduce conversion cost at very high body counts, respect the configured

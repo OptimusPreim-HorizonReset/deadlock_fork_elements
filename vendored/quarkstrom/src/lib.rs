@@ -16,6 +16,9 @@ use winit::{
 };
 
 use wgpu::util::DeviceExt;
+use std::num::NonZeroU32;
+use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
 use winit_input_helper::WinitInputHelper;
 
 #[repr(C)]
@@ -181,8 +184,14 @@ impl State {
             .next()
             .unwrap_or(surface_caps.formats[0]);
 
+        let surface_usage = if std::env::var("RENDER_DEBUG_DUMP_FRAMEBUFFER").is_ok() {
+            wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC
+        } else {
+            wgpu::TextureUsages::RENDER_ATTACHMENT
+        };
+
         let config = wgpu::SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            usage: surface_usage,
             format: surface_format,
             width: size.width,
             height: size.height,
@@ -516,8 +525,107 @@ impl State {
         }
 
         // submit will accept anything that implements IntoIter
-        self.queue.submit(std::iter::once(encoder.finish()));
-        output.present();
+        if std::env::var("RENDER_DEBUG_DUMP_FRAMEBUFFER").is_ok() {
+            // Capture the rendered swapchain texture to a CPU-mapped buffer and write PNG to logs/
+            let width = self.config.width;
+            let height = self.config.height;
+            let bytes_per_pixel = 4u32;
+            let unpadded_bytes_per_row = bytes_per_pixel * width;
+            let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+            let padded_bytes_per_row = ((unpadded_bytes_per_row + align - 1) / align) * align;
+            let buffer_size = (padded_bytes_per_row as u64) * (height as u64);
+
+            let output_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("Frame Capture Buffer"),
+                size: buffer_size,
+                usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+                mapped_at_creation: false,
+            });
+
+            encoder.copy_texture_to_buffer(
+                wgpu::ImageCopyTexture {
+                    texture: &output.texture,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d::ZERO,
+                    aspect: wgpu::TextureAspect::All,
+                },
+                wgpu::ImageCopyBuffer {
+                    buffer: &output_buffer,
+                    layout: wgpu::ImageDataLayout {
+                        offset: 0,
+                        bytes_per_row: NonZeroU32::new(padded_bytes_per_row),
+                        rows_per_image: NonZeroU32::new(height),
+                    },
+                },
+                wgpu::Extent3d {
+                    width,
+                    height,
+                    depth_or_array_layers: 1,
+                },
+            );
+
+            self.queue.submit(std::iter::once(encoder.finish()));
+            output.present();
+
+            // Map the buffer and write out the PNG (strip row padding)
+            let buffer_slice = output_buffer.slice(..);
+            let (tx, rx) = std::sync::mpsc::channel();
+            buffer_slice.map_async(wgpu::MapMode::Read, move |v| { let _ = tx.send(v); });
+            self.device.poll(wgpu::Maintain::Wait);
+            if let Ok(Ok(())) = rx.recv() {
+                let data = buffer_slice.get_mapped_range();
+                let mut rgba = vec![0u8; (width as usize) * (height as usize) * 4];
+                for row in 0..(height as usize) {
+                    let src_start = row * (padded_bytes_per_row as usize);
+                    let dst_start = row * (width as usize) * 4;
+                    rgba[dst_start..dst_start + (width as usize * 4)]
+                        .copy_from_slice(&data[src_start..src_start + (width as usize * 4)]);
+                }
+
+                // Convert BGRA -> RGBA when surface is BGRA
+                match self.config.format {
+                    wgpu::TextureFormat::Bgra8Unorm | wgpu::TextureFormat::Bgra8UnormSrgb => {
+                        for px in 0..(width as usize * height as usize) {
+                            let i = px * 4;
+                            let b = rgba[i];
+                            let g = rgba[i + 1];
+                            let r = rgba[i + 2];
+                            let a = rgba[i + 3];
+                            rgba[i] = r;
+                            rgba[i + 1] = g;
+                            rgba[i + 2] = b;
+                            rgba[i + 3] = a;
+                        }
+                    }
+                    _ => {}
+                }
+
+                std::fs::create_dir_all("logs").ok();
+                let ts = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0);
+                let filename = format!("logs/frame_dump_{}.png", ts);
+                match image::save_buffer_with_format(
+                    Path::new(&filename),
+                    &rgba,
+                    width,
+                    height,
+                    image::ColorType::Rgba8,
+                    image::ImageFormat::Png,
+                ) {
+                    Ok(_) => eprintln!("Wrote framebuffer capture to {}", filename),
+                    Err(e) => eprintln!("Failed saving framebuffer capture: {:?}", e),
+                }
+
+                output_buffer.unmap();
+            } else {
+                eprintln!("Failed to map framebuffer capture buffer");
+            }
+        } else {
+            self.queue.submit(std::iter::once(encoder.finish()));
+            output.present();
+        }
 
         Ok(())
     }
